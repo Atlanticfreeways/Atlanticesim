@@ -1,35 +1,46 @@
 # Atlantic eSIM Platform
 
-🚀 **PRODUCTION READY** - Multi-provider eSIM aggregation platform integrating 5 major providers: Maya Mobile, eSIMCard, eSIM Go/Breeze, Holafly Business, and Airalo.
+🚀 **PRODUCTION READY** - Multi-provider eSIM aggregation platform
 
 **Status**: ✅ Complete MVP ready for immediate deployment
 
-## Quick Start
+## 📚 Documentation
 
-1. **Setup Environment**
+**New to the project?** Start here:
+- 👨💻 [Developer Setup Guide](./DEVELOPER_SETUP.md) - Complete setup instructions
+
+## Quick Start (5 minutes)
+
+1. **Clone & Setup**
    ```bash
+   git clone https://github.com/Atlanticfreeways/Atlanticesim.git
+   cd atlantic-esim
    cp .env.example .env
-   # Edit .env with your configuration
    ```
 
-2. **Start Backend**
+2. **Get Credentials**
+   - Ask team lead for API keys
+   - Fill in `.env` with your values
+
+3. **Start Development**
    ```bash
-   docker-compose up -d postgres redis
    npm install
+   docker-compose up -d
    npm run db:migrate
-   npm run start:dev
-   ```
-
-3. **Start Frontend**
-   ```bash
-   cd frontend
-   npm install
+   npm run db:seed
    npm run dev
    ```
 
-4. **Access Applications**
+4. **Start Frontend** (in another terminal)
+   ```bash
+   cd frontend
+   npm run dev
+   ```
+
+5. **Access Applications**
    - Frontend: http://localhost:3001
-   - API Documentation: http://localhost:3000/api/docs
+   - Backend: http://localhost:3002
+   - API Docs: http://localhost:3002/api/docs
 
 ## Project Structure
 
@@ -96,44 +107,13 @@ frontend/               # Frontend (React)
 - `POST /api/v1/payments/webhook` - Stripe webhook
 - `POST /api/v1/payments/refund` - Refund payment
 
-## Provider Integration Status
+## Features
 
-- ✅ Airalo (Data-only)
-- ✅ Maya Mobile (Data + Voice + SMS)
-- ✅ eSIMCard (Data + Voice + SMS)
-- ✅ eSIM Go/Breeze (Data + Voice + SMS)
-- ✅ Holafly Business (Data-only)
-
-## Development Progress
-
-### Phase 1: Foundation ✅
-- [x] Project structure
-- [x] Database schema
-- [x] Authentication system
-- [x] First provider adapter (Airalo)
-- [x] Package search API
-
-### Phase 2: Core Features ✅
-- [x] Order management
-- [x] Payment integration (Stripe)
-- [x] eSIM operations
-- [x] QR code generation
-- [x] Usage tracking
-- [x] Additional provider adapters
-
-### Phase 3: Frontend ✅
-- [x] React web application
-- [x] User dashboard
-- [x] Package browsing
-- [x] Authentication UI
-- [x] eSIM management
-- [x] QR code display
-- [x] Admin panel
-
-### Phase 4: Production Ready ✅
-- [x] All 5 provider adapters
-- [x] Admin dashboard with analytics
-- [x] CI/CD pipeline setup
-- [x] Production Docker configuration
-- [x] Nginx reverse proxy
-- [x] Email notifications
+- ✅ Multi-provider support
+- ✅ Data, Voice, and SMS capabilities
+- ✅ Global coverage
+- ✅ Order management
+- ✅ Payment integration
+- ✅ Admin dashboard with analytics
+- ✅ CI/CD pipeline
+- ✅ Email notifications

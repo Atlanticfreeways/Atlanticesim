@@ -34,12 +34,71 @@ coverage/
 # Prisma
 prisma/migrations/migration_lock.toml
 
-# Documentation (keep only README.md and LOGIN_CREDENTIALS.md)
+# Documentation (keep only README.md and DEVELOPER_SETUP.md)
 *.md
 !README.md
-!LOGIN_CREDENTIALS.md
+!DEVELOPER_SETUP.md
+
+# Credentials and sensitive files (NEVER commit these!)
+LOGIN_CREDENTIALS.md
+.env
+.env.local
+.env.production
+.env.staging
+.env.*.local
+secrets.json
+credentials.json
+
+# Price lists and data files
+eSim Price list/
+*.xlsx
+*.xls
 
 # Test files (temporary debugging files)
 test-*.js
 check-*.js
 simple-test.js
+test-port.sh
+
+# Roadmaps, task files, and overviews (NEVER commit)
+*ROADMAP*
+*TASK*
+*OVERVIEW*
+*PHASES*
+*IMPLEMENTATION*
+*DEPLOYMENT*
+*DOCUMENTATION*
+*EXCEL*
+*PRICING*
+*QUICK*
+*SECURITY*
+*SETUP*
+*START*
+*BLUEPRINT*
+*STATUS*
+*SECRETS*
+*GUIDE*
+
+# AWS & Cloud
+.aws/
+.aws-credentials
+aws-credentials.json
+
+# IDE & Editor
+*.sublime-project
+*.sublime-workspace
+.vscode/settings.json
+.vscode/launch.json
+
+# OS & System
+.env.local.swp
+.env.local.swo
+*.pem
+*.key
+*.cert
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*~
