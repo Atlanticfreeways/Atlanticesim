@@ -1,7 +1,7 @@
-import React, { createContext } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
-import { useAuthProvider } from './hooks/useAuth';
+import { AuthProvider, useAuth } from './hooks/useAuth.tsx';
 import { LoginForm } from './components/auth/LoginForm';
 import { Dashboard } from './components/dashboard/Dashboard';
 import { PackagesPage } from './pages/PackagesPage';
@@ -10,10 +10,8 @@ import { Navigation } from './components/common/Navigation';
 
 const queryClient = new QueryClient();
 
-export const AuthContext = createContext<any>(null);
-
 const AppContent: React.FC = () => {
-  const auth = useAuthProvider();
+  const auth = useAuth();
 
   if (auth.loading) {
     return (
@@ -35,28 +33,28 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <AuthContext.Provider value={auth}>
-      <div className="min-h-screen bg-gray-50">
-        <Navigation />
-        <main className="max-w-7xl mx-auto py-6 px-4">
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/packages" element={<PackagesPage />} />
-            <Route path="/admin" element={<AdminPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </main>
-      </div>
-    </AuthContext.Provider>
+    <div className="min-h-screen bg-gray-50">
+      <Navigation />
+      <main className="max-w-7xl mx-auto py-6 px-4">
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/packages" element={<PackagesPage />} />
+          <Route path="/admin" element={<AdminPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
+    </div>
   );
 };
 
 export const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router>
-        <AppContent />
-      </Router>
+      <AuthProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </AuthProvider>
     </QueryClientProvider>
   );
 };

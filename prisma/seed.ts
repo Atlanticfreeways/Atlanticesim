@@ -1,8 +1,30 @@
 import { PrismaClient } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
 async function main() {
+  // Create default admin user
+  const hashedPassword = await bcrypt.hash('Admin123!', 10);
+  
+  const adminUser = await prisma.user.upsert({
+    where: { email: 'admin@atlanticesim.com' },
+    update: {},
+    create: {
+      email: 'admin@atlanticesim.com',
+      password: hashedPassword,
+      name: 'Admin User',
+      role: 'ADMIN',
+      isActive: true,
+    },
+  });
+
+  console.log('Created admin user:', {
+    email: adminUser.email,
+    name: adminUser.name,
+    role: adminUser.role,
+  });
+
   // Create providers
   const airalo = await prisma.provider.upsert({
     where: { slug: 'airalo' },

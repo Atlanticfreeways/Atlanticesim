@@ -24,8 +24,11 @@ services:
     ports:
       - "3000:3000"
     environment:
-      DATABASE_URL: postgresql://postgres:password@postgres:5432/atlantic_esim
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/atlantic_esim?schema=public
       REDIS_URL: redis://redis:6379
+      JWT_SECRET: dev-secret-key-change-in-production
+      NODE_ENV: development
+      PORT: 3000
     depends_on:
       - postgres
       - redis

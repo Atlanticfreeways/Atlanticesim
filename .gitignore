@@ -34,6 +34,12 @@ coverage/
 # Prisma
 prisma/migrations/migration_lock.toml
 
-# Documentation (keep only README.md)
+# Documentation (keep only README.md and LOGIN_CREDENTIALS.md)
 *.md
 !README.md
+!LOGIN_CREDENTIALS.md
+
+# Test files (temporary debugging files)
+test-*.js
+check-*.js
+simple-test.js

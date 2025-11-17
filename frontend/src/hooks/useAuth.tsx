@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext } from 'react';
+import React, { useState, useEffect, createContext, useContext } from 'react';
 import { User } from '../types';
 import { authApi, userApi } from '../services/api';
 
@@ -20,7 +20,7 @@ export const useAuth = () => {
   return context;
 };
 
-export const useAuthProvider = () => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -53,5 +53,9 @@ export const useAuthProvider = () => {
     setUser(null);
   };
 
-  return { user, login, register, logout, loading };
+  return (
+    <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
