@@ -34,10 +34,12 @@ coverage/
 # Prisma
 prisma/migrations/migration_lock.toml
 
-# Documentation (keep only README.md and DEVELOPER_SETUP.md)
+# Documentation (keep only essential files)
 *.md
 !README.md
 !DEVELOPER_SETUP.md
+!DEPLOYMENT_GUIDE.md
+!SECRETS_MANAGEMENT.md
 
 # Credentials and sensitive files (NEVER commit these!)
 LOGIN_CREDENTIALS.md
@@ -59,25 +61,53 @@ test-*.js
 check-*.js
 simple-test.js
 test-port.sh
+terminal log.md
 
 # Roadmaps, task files, and overviews (NEVER commit)
-*ROADMAP*
-*TASK*
-*OVERVIEW*
-*PHASES*
-*IMPLEMENTATION*
-*DEPLOYMENT*
-*DOCUMENTATION*
-*EXCEL*
-*PRICING*
-*QUICK*
-*SECURITY*
-*SETUP*
-*START*
-*BLUEPRINT*
-*STATUS*
-*SECRETS*
-*GUIDE*
+# All markdown files except whitelisted ones
+*ROADMAP*.md
+*TASK*.md
+*OVERVIEW*.md
+*PHASES*.md
+*IMPLEMENTATION*.md
+*DEPLOYMENT*.md
+*DOCUMENTATION*.md
+*EXCEL*.md
+*PRICING*.md
+*QUICK*.md
+*SECURITY*.md
+*SETUP*.md
+*START*.md
+*BLUEPRINT*.md
+*STATUS*.md
+*SECRETS*.md
+*GUIDE*.md
+*RESULTS*.md
+*REPORT*.md
+*SUMMARY*.md
+*PLAN*.md
+*ACTION*.md
+*EXECUTION*.md
+*COMPLETE*.md
+*PROGRESS*.md
+*CHECKLIST*.md
+*STRATEGY*.md
+*REFERENCE*.md
+*INDEX*.md
+*BRIDGE*.md
+*TESTING*.md
+*COMPONENT*.md
+*VERIFICATION*.md
+*SESSION*.md
+*IMMEDIATE*.md
+*NEXT*.md
+*PHASE*.md
+
+# Additional markdown patterns
+PHASE_*.md
+OPTION_*.md
+CLEANUP*.md
+FINAL*.md
 
 # AWS & Cloud
 .aws/

@@ -12,23 +12,32 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
   }
 
   async onModuleInit() {
-    try {
-      this.logger.log('Attempting to connect to database...');
-      this.logger.log(`DATABASE_URL: ${process.env.DATABASE_URL?.replace(/password=[^@]+/, 'password=***')}`);
-      
-      await this.$connect();
-      
-      this.logger.log('✅ Successfully connected to database');
-      
-      // Test query
-      const result = await this.$queryRaw`SELECT current_database() as db, current_user as "user"`;
-      this.logger.log(`Connected to database: ${JSON.stringify(result)}`);
-    } catch (error) {
-      this.logger.error('❌ Failed to connect to database');
-      this.logger.error(`Error: ${error.message}`);
-      this.logger.error(`Code: ${error.code}`);
-      this.logger.error(`Full error: ${JSON.stringify(error, null, 2)}`);
-      throw error;
+    const maxRetries = 5;
+    let retries = 0;
+
+    while (retries < maxRetries) {
+      try {
+        this.logger.log('Attempting to connect to database...');
+        this.logger.log(`DATABASE_URL: ${process.env.DATABASE_URL?.replace(/password=[^@]+/, 'password=***')}`);
+        
+        await this.$connect();
+        
+        this.logger.log('✅ Successfully connected to database');
+        return;
+      } catch (error) {
+        retries++;
+        this.logger.error(`❌ Database connection failed (attempt ${retries}/${maxRetries})`);
+        this.logger.error(`Error: ${error.message}`);
+        
+        if (retries === maxRetries) {
+          this.logger.error('❌ Max retries reached. Database connection failed.');
+          throw new Error(`Failed to connect to database after ${maxRetries} attempts: ${error.message}`);
+        }
+        
+        const waitTime = Math.pow(2, retries) * 1000; // Exponential backoff
+        this.logger.warn(`⏳ Retrying in ${waitTime}ms...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
     }
   }
 }
