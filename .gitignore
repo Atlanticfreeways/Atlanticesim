@@ -1,0 +1,135 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Build
+dist/
+build/
+
+# Logs
+*.log
+
+# Database
+*.db
+*.sqlite
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Coverage
+coverage/
+
+# Prisma
+prisma/migrations/migration_lock.toml
+
+# Documentation (keep only essential files)
+*.md
+!README.md
+!ROADMAP.md
+!DEVELOPER_SETUP.md
+!DEPLOYMENT_GUIDE.md
+!SECRETS_MANAGEMENT.md
+
+# Credentials and sensitive files (NEVER commit these!)
+LOGIN_CREDENTIALS.md
+.env
+.env.local
+.env.production
+.env.staging
+.env.*.local
+secrets.json
+credentials.json
+
+# Price lists and data files
+eSim Price list/
+*.xlsx
+*.xls
+
+# Test files (temporary debugging files)
+test-*.js
+check-*.js
+simple-test.js
+test-port.sh
+terminal log.md
+
+# Roadmaps, task files, and overviews (NEVER commit)
+# All markdown files except whitelisted ones
+# *ROADMAP*.md  # Commented out - ROADMAP.md is whitelisted above
+*TASK*.md
+*OVERVIEW*.md
+*PHASES*.md
+*IMPLEMENTATION*.md
+*DEPLOYMENT*.md
+*DOCUMENTATION*.md
+*EXCEL*.md
+*PRICING*.md
+*QUICK*.md
+*SECURITY*.md
+*SETUP*.md
+*START*.md
+*BLUEPRINT*.md
+*STATUS*.md
+*SECRETS*.md
+*GUIDE*.md
+*RESULTS*.md
+*REPORT*.md
+*SUMMARY*.md
+*PLAN*.md
+*ACTION*.md
+*EXECUTION*.md
+*COMPLETE*.md
+*PROGRESS*.md
+*CHECKLIST*.md
+*STRATEGY*.md
+*REFERENCE*.md
+*INDEX*.md
+*BRIDGE*.md
+*TESTING*.md
+*COMPONENT*.md
+*VERIFICATION*.md
+*SESSION*.md
+*IMMEDIATE*.md
+*NEXT*.md
+*PHASE*.md
+
+# Additional markdown patterns
+PHASE_*.md
+OPTION_*.md
+CLEANUP*.md
+FINAL*.md
+
+# AWS & Cloud
+.aws/
+.aws-credentials
+aws-credentials.json
+
+# IDE & Editor
+*.sublime-project
+*.sublime-workspace
+.vscode/settings.json
+.vscode/launch.json
+
+# OS & System
+.env.local.swp
+.env.local.swo
+*.pem
+*.key
+*.cert
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*~

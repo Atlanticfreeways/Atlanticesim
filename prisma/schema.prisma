@@ -1,0 +1,175 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  phone       String?
+  name        String
+  password    String
+  role        UserRole @default(END_USER)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orders      Order[]
+  esims       ESim[]
+  preferences UserPreferences?
+
+  @@map("users")
+}
+
+model UserPreferences {
+  id               String  @id @default(cuid())
+  userId           String  @unique
+  preferredCurrency String @default("USD")
+  notifications    Boolean @default(true)
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+model Provider {
+  id          String            @id @default(cuid())
+  name        String            @unique
+  slug        String            @unique
+  apiBaseUrl  String
+  isActive    Boolean           @default(true)
+  config      Json
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  packages    Package[]
+  orders      Order[]
+  esims       ESim[]
+
+  @@map("providers")
+}
+
+model Package {
+  id                String   @id @default(cuid())
+  providerId        String
+  providerPackageId String
+  name              String
+  description       String?
+  countries         String[]
+  regions           String[]
+  dataAmount        Int
+  dataUnit          DataUnit
+  isUnlimited       Boolean  @default(false)
+  validityDays      Int
+  startType         StartType @default(IMMEDIATE)
+  price             Decimal  @db.Decimal(10, 2)
+  currency          String   @default("USD")
+  features          String[]
+  hasVoice          Boolean  @default(false)
+  hasSms            Boolean  @default(false)
+  voiceMinutes      Int?
+  smsCount          Int?
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  provider Provider @relation(fields: [providerId], references: [id])
+  orders   Order[]
+
+  @@unique([providerId, providerPackageId])
+  @@map("packages")
+}
+
+model Order {
+  id              String        @id @default(cuid())
+  userId          String
+  packageId       String
+  providerId      String
+  status          OrderStatus   @default(PENDING)
+  paymentAmount   Decimal       @db.Decimal(10, 2)
+  paymentCurrency String        @default("USD")
+  paymentMethod   String?
+  transactionId   String?
+  paymentStatus   PaymentStatus @default(PENDING)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id])
+  package  Package  @relation(fields: [packageId], references: [id])
+  provider Provider @relation(fields: [providerId], references: [id])
+  esim     ESim?
+
+  @@map("orders")
+}
+
+model ESim {
+  id                String    @id @default(cuid())
+  orderId           String    @unique
+  userId            String
+  providerId        String
+  iccid             String    @unique
+  status            ESimStatus @default(INACTIVE)
+  qrCode            String?
+  smdpAddress       String?
+  activationCode    String?
+  confirmationCode  String?
+  dataUsed          Int       @default(0)
+  dataTotal         Int
+  validUntil        DateTime?
+  activatedAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  order    Order    @relation(fields: [orderId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+  provider Provider @relation(fields: [providerId], references: [id])
+
+  @@map("esims")
+}
+
+enum UserRole {
+  END_USER
+  BUSINESS_PARTNER
+  ADMIN
+  SUPPORT_AGENT
+}
+
+enum DataUnit {
+  MB
+  GB
+}
+
+enum StartType {
+  IMMEDIATE
+  FIRST_USE
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  CONFIRMED
+  ACTIVATED
+  COMPLETED
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum ESimStatus {
+  INACTIVE
+  ACTIVE
+  EXPIRED
+  DEPLETED
+  SUSPENDED
+}
