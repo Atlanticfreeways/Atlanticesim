@@ -280,8 +280,8 @@ curl http://localhost:3000/api/v1/packages/{id}
 
 ### Must Have ✅
 - [ ] Git initialized ✅ DONE
-- [ ] NotificationsModule imported
-- [ ] CORS configured
+- [x] NotificationsModule imported
+- [x] CORS configured
 - [ ] Environment variables set
 - [ ] All 5 provider API applications submitted
 - [ ] Provider interface designed
@@ -301,9 +301,9 @@ curl http://localhost:3000/api/v1/packages/{id}
 
 **Day 1** (Jan 14):
 - [x] Git setup
-- [ ] NotificationsModule
-- [ ] CORS
-- [ ] Environment
+- [x] NotificationsModule
+- [x] CORS
+- [x] Environment (template updated)
 - [ ] Provider signups
 
 **Day 2** (Jan 15):

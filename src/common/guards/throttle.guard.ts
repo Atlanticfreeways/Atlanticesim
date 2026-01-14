@@ -4,7 +4,7 @@ import { Request } from 'express';
 
 @Injectable()
 export class CustomThrottleGuard extends ThrottlerGuard {
-  protected getTracker(req: Request): string {
+  protected async getTracker(req: Request): Promise<string> {
     // Use user ID if authenticated, otherwise use IP address
     const user = (req as any).user;
     if (user && user.id) {
