@@ -8,6 +8,7 @@ import { OrdersModule } from './modules/orders/orders.module';
 import { EsimsModule } from './modules/esims/esims.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PrismaModule } from './config/prisma.module';
 
 @Module({
@@ -25,6 +26,7 @@ import { PrismaModule } from './config/prisma.module';
     EsimsModule,
     PaymentsModule,
     AdminModule,
+    NotificationsModule,
   ],
 })
-export class AppModule {}
+export class AppModule { }
