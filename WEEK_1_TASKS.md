@@ -284,7 +284,7 @@ curl http://localhost:3000/api/v1/packages/{id}
 - [x] CORS configured
 - [ ] Environment variables set
 - [ ] All 5 provider API applications submitted
-- [ ] Provider interface designed
+- [x] Provider interface designed
 - [ ] Airalo adapter implemented
 - [ ] Airalo adapter tested
 - [ ] At least 1 successful package search
@@ -307,8 +307,8 @@ curl http://localhost:3000/api/v1/packages/{id}
 - [ ] Provider signups
 
 **Day 2** (Jan 15):
-- [ ] Provider interface
-- [ ] Base class
+- [x] Provider interface
+- [x] Base class
 
 **Day 3-4** (Jan 16-17):
 - [ ] Airalo adapter

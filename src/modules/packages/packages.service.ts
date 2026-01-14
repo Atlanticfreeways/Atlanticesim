@@ -8,7 +8,7 @@ export class PackagesService {
   constructor(
     private prisma: PrismaService,
     private providersService: ProvidersService,
-  ) {}
+  ) { }
 
   async searchPackages(filters: PackageFilters) {
     const providers = await this.providersService.getAllProviders();
@@ -17,14 +17,14 @@ export class PackagesService {
     for (const provider of providers) {
       try {
         const adapter = this.providersService.getAdapter(provider.slug);
-        const packages = await adapter.getPackages(filters);
-        
+        const packages = await adapter.searchPackages(filters);
+
         const enrichedPackages = packages.map(pkg => ({
           ...pkg,
           providerId: provider.id,
           providerName: provider.name,
         }));
-        
+
         allPackages.push(...enrichedPackages);
       } catch (error) {
         console.error(`Error fetching packages from ${provider.name}:`, error.message);

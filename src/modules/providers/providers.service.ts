@@ -2,20 +2,20 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../config/prisma.service';
 import { AiraloAdapter } from './adapters/airalo.adapter';
 import { MayaMobileAdapter } from './adapters/maya-mobile.adapter';
-import { EsimcardAdapter } from './adapters/esimcard.adapter';
+import { EsimCardAdapter } from './adapters/esimcard.adapter'; // Corrected class name
 import { BreezeAdapter } from './adapters/breeze.adapter';
 import { HolaflyAdapter } from './adapters/holafly.adapter';
-import { ProviderAdapter } from '../../common/interfaces/provider.interface';
+import { IProviderAdapter } from '../../common/interfaces/provider.interface';
 
 @Injectable()
 export class ProvidersService {
-  private adapters: Map<string, ProviderAdapter> = new Map();
+  private adapters: Map<string, IProviderAdapter> = new Map();
 
   constructor(
     private prisma: PrismaService,
     private airaloAdapter: AiraloAdapter,
     private mayaMobileAdapter: MayaMobileAdapter,
-    private esimcardAdapter: EsimcardAdapter,
+    private esimcardAdapter: EsimCardAdapter,
     private breezeAdapter: BreezeAdapter,
     private holaflyAdapter: HolaflyAdapter,
   ) {
@@ -26,7 +26,7 @@ export class ProvidersService {
     this.adapters.set('holafly', holaflyAdapter);
   }
 
-  getAdapter(providerId: string): ProviderAdapter {
+  getAdapter(providerId: string): IProviderAdapter {
     const adapter = this.adapters.get(providerId);
     if (!adapter) {
       throw new Error(`Provider adapter not found: ${providerId}`);
@@ -42,6 +42,6 @@ export class ProvidersService {
 
   async getProviderHealth(providerId: string) {
     const adapter = this.getAdapter(providerId);
-    return adapter.healthCheck();
+    return adapter.checkHealth();
   }
 }

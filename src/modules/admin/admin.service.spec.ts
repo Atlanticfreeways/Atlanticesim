@@ -109,8 +109,8 @@ describe('AdminService', () => {
   describe('getProviderHealth', () => {
     it('should retrieve provider health status', async () => {
       const mockHealth = [
-        { ...mockProviders[0], health: { status: 'up', responseTime: 100 } },
-        { ...mockProviders[1], health: { status: 'up', responseTime: 150 } },
+        { ...mockProviders[0], health: { isAvailable: true, responseTime: 100 } },
+        { ...mockProviders[1], health: { isAvailable: true, responseTime: 150 } },
       ];
 
       (providersService.getAllProviders as jest.Mock).mockResolvedValue(mockProviders);
@@ -121,7 +121,7 @@ describe('AdminService', () => {
       const result = await service.getProviderHealth();
 
       expect(result).toHaveLength(2);
-      expect(result[0].health.status).toBe('up');
+      expect(result[0].health.isAvailable).toBe(true);
     });
 
     it('should handle provider health check failure', async () => {
@@ -132,11 +132,11 @@ describe('AdminService', () => {
 
       const result = await service.getProviderHealth();
 
-      expect(result[0].health.status).toBe('down');
+      expect(result[0].health.isAvailable).toBe(false);
     });
 
     it('should include response time in health check', async () => {
-      const mockHealth = { status: 'up', responseTime: 120, lastChecked: new Date() };
+      const mockHealth = { isAvailable: true, responseTime: 120, lastChecked: new Date() };
 
       (providersService.getAllProviders as jest.Mock).mockResolvedValue([mockProviders[0]]);
       (providersService.getProviderHealth as jest.Mock).mockResolvedValue(mockHealth);

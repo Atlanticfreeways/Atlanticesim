@@ -9,7 +9,7 @@ export class OrdersService {
   constructor(
     private prisma: PrismaService,
     private providersService: ProvidersService,
-  ) {}
+  ) { }
 
   async createOrder(userId: string, createOrderDto: CreateOrderDto) {
     const { packageId, providerId, paymentMethod } = createOrderDto;
@@ -40,7 +40,8 @@ export class OrdersService {
       const providerOrder = await adapter.createOrder({
         packageId,
         userId,
-        paymentMethod: paymentMethod || 'card',
+        email: 'user@example.com', // TODO: Get from user profile
+        quantity: 1
       });
 
       // Update order with provider response
@@ -48,7 +49,7 @@ export class OrdersService {
         where: { id: order.id },
         data: {
           status: OrderStatus.PROCESSING,
-          transactionId: providerOrder.orderId,
+          transactionId: providerOrder.providerOrderId,
         },
         include: {
           package: true,
@@ -114,7 +115,7 @@ export class OrdersService {
 
   async cancelOrder(orderId: string, userId: string) {
     const order = await this.getOrderById(orderId, userId);
-    
+
     if (order.status !== OrderStatus.PENDING && order.status !== OrderStatus.PROCESSING) {
       throw new Error('Order cannot be cancelled');
     }

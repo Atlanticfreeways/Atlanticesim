@@ -287,13 +287,14 @@ describe('EsimsService', () => {
       const esimId = 'esim-1';
       const userId = 'user-1';
       const mockUsage = {
-        dataUsed: 2048,
+        dataRemaining: 8192,
         dataTotal: 10240,
-        validUntil: new Date(),
+        status: 'active',
+        expiresAt: new Date(),
       };
 
       const mockAdapter = {
-        getUsageData: jest.fn().mockResolvedValue(mockUsage),
+        getESIMDetails: jest.fn().mockResolvedValue(mockUsage),
       };
 
       (prismaService.eSim.findFirst as jest.Mock).mockResolvedValue(mockESim);
@@ -302,21 +303,23 @@ describe('EsimsService', () => {
 
       const result = await service.getUsageData(esimId, userId);
 
-      expect(mockAdapter.getUsageData).toHaveBeenCalledWith('iccid-123');
-      expect(result).toEqual(mockUsage);
+      expect(mockAdapter.getESIMDetails).toHaveBeenCalledWith('iccid-123');
+      expect(result.dataTotal).toBe(mockUsage.dataTotal);
+      expect(result.validUntil).toBe(mockUsage.expiresAt);
     });
 
     it('should update local usage data', async () => {
       const esimId = 'esim-1';
       const userId = 'user-1';
       const mockUsage = {
-        dataUsed: 5000,
+        dataRemaining: 5240,
         dataTotal: 10240,
-        validUntil: new Date(),
+        status: 'active',
+        expiresAt: new Date(),
       };
 
       const mockAdapter = {
-        getUsageData: jest.fn().mockResolvedValue(mockUsage),
+        getESIMDetails: jest.fn().mockResolvedValue(mockUsage),
       };
 
       (prismaService.eSim.findFirst as jest.Mock).mockResolvedValue(mockESim);
@@ -328,8 +331,8 @@ describe('EsimsService', () => {
       expect(prismaService.eSim.update).toHaveBeenCalledWith({
         where: { id: esimId },
         data: {
-          dataUsed: mockUsage.dataUsed,
-          validUntil: mockUsage.validUntil,
+          dataUsed: 5000,
+          validUntil: mockUsage.expiresAt,
         },
       });
     });
@@ -339,7 +342,7 @@ describe('EsimsService', () => {
       const userId = 'user-1';
 
       const mockAdapter = {
-        getUsageData: jest
+        getESIMDetails: jest
           .fn()
           .mockRejectedValue(new Error('Provider error')),
       };
@@ -369,7 +372,7 @@ describe('EsimsService', () => {
     it('should activate inactive esim successfully', async () => {
       const esimId = 'esim-1';
       const userId = 'user-1';
-      const activationResult = { success: true };
+      const activationResult = { status: 'active' };
 
       const mockAdapter = {
         activateESIM: jest.fn().mockResolvedValue(activationResult),
@@ -408,7 +411,7 @@ describe('EsimsService', () => {
     it('should call provider activation method', async () => {
       const esimId = 'esim-1';
       const userId = 'user-1';
-      const activationResult = { success: true };
+      const activationResult = { status: 'active' };
 
       const mockAdapter = {
         activateESIM: jest.fn().mockResolvedValue(activationResult),
@@ -440,7 +443,7 @@ describe('EsimsService', () => {
     it('should not update status if activation fails', async () => {
       const esimId = 'esim-1';
       const userId = 'user-1';
-      const activationResult = { success: false };
+      const activationResult = { status: 'failed' };
 
       const mockAdapter = {
         activateESIM: jest.fn().mockResolvedValue(activationResult),

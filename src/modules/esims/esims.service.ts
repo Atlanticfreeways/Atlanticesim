@@ -9,7 +9,7 @@ export class EsimsService {
   constructor(
     private prisma: PrismaService,
     private providersService: ProvidersService,
-  ) {}
+  ) { }
 
   async getUserEsims(userId: string) {
     return this.prisma.eSim.findMany({
@@ -48,17 +48,17 @@ export class EsimsService {
 
   async getQrCode(esimId: string, userId: string) {
     const esim = await this.getEsimById(esimId, userId);
-    
+
     if (!esim.qrCode) {
       // Generate QR code if not exists
       const qrData = `LPA:1$${esim.smdpAddress}$${esim.activationCode}`;
       const qrCodeDataUrl = await QRCode.toDataURL(qrData);
-      
+
       await this.prisma.eSim.update({
         where: { id: esimId },
         data: { qrCode: qrCodeDataUrl },
       });
-      
+
       return { qrCode: qrCodeDataUrl };
     }
 
@@ -67,21 +67,31 @@ export class EsimsService {
 
   async getUsageData(esimId: string, userId: string) {
     const esim = await this.getEsimById(esimId, userId);
-    
+
     try {
       const adapter = this.providersService.getAdapter(esim.order.provider.slug);
-      const usage = await adapter.getUsageData(esim.iccid);
-      
+      const details = await adapter.getESIMDetails(esim.iccid);
+
       // Update local usage data
+      // ESIMDetails has dataRemaining, so dataUsed = total - remaining (if numeric)
+      const dataUsed = (details.dataTotal && details.dataRemaining !== undefined)
+        ? Math.max(0, details.dataTotal - details.dataRemaining)
+        : 0;
+
       await this.prisma.eSim.update({
         where: { id: esimId },
         data: {
-          dataUsed: usage.dataUsed,
-          validUntil: usage.validUntil,
+          dataUsed: dataUsed,
+          validUntil: details.expiresAt,
         },
       });
-      
-      return usage;
+
+      return {
+        dataUsed,
+        dataTotal: details.dataTotal,
+        validUntil: details.expiresAt,
+        status: details.status
+      };
     } catch (error) {
       // Return cached data if provider unavailable
       return {
@@ -94,7 +104,7 @@ export class EsimsService {
 
   async activateEsim(esimId: string, userId: string) {
     const esim = await this.getEsimById(esimId, userId);
-    
+
     if (esim.status !== ESimStatus.INACTIVE) {
       throw new Error('eSIM is already activated or cannot be activated');
     }
@@ -102,7 +112,7 @@ export class EsimsService {
     const adapter = this.providersService.getAdapter(esim.order.provider.slug);
     const result = await adapter.activateESIM(esim.iccid);
 
-    if (result.success) {
+    if (result.status === 'active' || result.status === 'pending') {
       await this.prisma.eSim.update({
         where: { id: esimId },
         data: {

@@ -7,7 +7,7 @@ export class AdminService {
   constructor(
     private prisma: PrismaService,
     private providersService: ProvidersService,
-  ) {}
+  ) { }
 
   async getDashboardStats() {
     const [totalUsers, totalOrders, totalEsims, activeProviders] = await Promise.all([
@@ -39,7 +39,7 @@ export class AdminService {
         } catch (error) {
           return {
             ...provider,
-            health: { status: 'down', responseTime: 0, lastChecked: new Date() },
+            health: { isAvailable: false, responseTime: 0, lastChecked: new Date(), errorMessage: error.message },
           };
         }
       })
