@@ -9,6 +9,8 @@ import helmet from 'helmet';
 import * as compression from 'compression';
 
 async function bootstrap() {
+  console.log('ENV DEBUG: Keys available:', Object.keys(process.env).sort());
+
   const app = await NestFactory.create(AppModule, {
     logger: loggerConfig,
   });
