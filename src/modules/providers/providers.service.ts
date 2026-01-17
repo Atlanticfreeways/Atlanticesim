@@ -1,29 +1,47 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../config/prisma.service';
 import { AiraloAdapter } from './adapters/airalo.adapter';
 import { MayaMobileAdapter } from './adapters/maya-mobile.adapter';
-import { EsimCardAdapter } from './adapters/esimcard.adapter'; // Corrected class name
+import { EsimCardAdapter } from './adapters/esimcard.adapter';
 import { BreezeAdapter } from './adapters/breeze.adapter';
 import { HolaflyAdapter } from './adapters/holafly.adapter';
 import { IProviderAdapter } from '../../common/interfaces/provider.interface';
+import { EsimGoAdapter } from './adapters/esim-go.adapter';
+import { ProviderHealthService } from './provider-health.service';
 
 @Injectable()
-export class ProvidersService {
+export class ProvidersService implements OnModuleInit {
+  private readonly logger = new Logger(ProvidersService.name);
   private adapters: Map<string, IProviderAdapter> = new Map();
 
   constructor(
     private prisma: PrismaService,
+    private healthService: ProviderHealthService,
     private airaloAdapter: AiraloAdapter,
+    private esimGoAdapter: EsimGoAdapter,
     private mayaMobileAdapter: MayaMobileAdapter,
     private esimcardAdapter: EsimCardAdapter,
     private breezeAdapter: BreezeAdapter,
     private holaflyAdapter: HolaflyAdapter,
   ) {
     this.adapters.set('airalo', airaloAdapter);
+    this.adapters.set('esim-go', esimGoAdapter);
     this.adapters.set('maya-mobile', mayaMobileAdapter);
     this.adapters.set('esimcard', esimcardAdapter);
     this.adapters.set('breeze', breezeAdapter);
     this.adapters.set('holafly', holaflyAdapter);
+  }
+
+  async onModuleInit() {
+    // Register all adapters with health service
+    this.healthService.registerAdapter('airalo', 'Airalo', this.airaloAdapter);
+    this.healthService.registerAdapter('esim-go', 'eSIM Go', this.esimGoAdapter);
+    this.healthService.registerAdapter('maya-mobile', 'Maya Mobile', this.mayaMobileAdapter);
+    this.healthService.registerAdapter('esimcard', 'eSIMCard', this.esimcardAdapter);
+    this.healthService.registerAdapter('breeze', 'Breeze', this.breezeAdapter);
+    this.healthService.registerAdapter('holafly', 'Holafly', this.holaflyAdapter);
+
+    this.logger.log('All provider adapters registered with health monitoring');
   }
 
   getAdapter(providerId: string): IProviderAdapter {
@@ -43,5 +61,76 @@ export class ProvidersService {
   async getProviderHealth(providerId: string) {
     const adapter = this.getAdapter(providerId);
     return adapter.checkHealth();
+  }
+
+  /**
+   * Search packages from all healthy providers
+   * Automatically filters out unhealthy providers to prevent cascading failures
+   */
+  async searchFromAllProviders(filters: any): Promise<any[]> {
+    // Get only healthy provider IDs
+    const healthyProviderIds = this.healthService.getHealthyProviderIds();
+
+    if (healthyProviderIds.length === 0) {
+      this.logger.warn('⚠️  No healthy providers available for search');
+      // Fallback: try all adapters anyway (last resort)
+      return this.searchFromAllProvidersUnsafe(filters);
+    }
+
+    // Filter adapters to only healthy ones
+    const healthyAdapters = healthyProviderIds
+      .map(id => this.adapters.get(id))
+      .filter(adapter => adapter !== undefined) as IProviderAdapter[];
+
+    this.logger.debug(
+      `Searching packages from ${healthyAdapters.length} healthy providers: ${healthyProviderIds.join(', ')}`
+    );
+
+    const results = await Promise.allSettled(
+      healthyAdapters.map(adapter =>
+        Promise.race([
+          adapter.searchPackages(filters),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('Search timeout')), 15000)
+          ),
+        ])
+      )
+    );
+
+    const packages = results.flatMap(result => {
+      if (result.status === 'fulfilled') {
+        return result.value;
+      } else {
+        this.logger.warn(`Search failed for a provider: ${result.reason.message}`);
+        return [];
+      }
+    });
+
+    this.logger.log(`Retrieved ${packages.length} packages from ${healthyAdapters.length} providers`);
+    return packages;
+  }
+
+  /**
+   * Fallback search that tries all adapters regardless of health status
+   * Used only when no providers are marked as healthy
+   */
+  private async searchFromAllProvidersUnsafe(filters: any): Promise<any[]> {
+    this.logger.warn('🚨 Attempting unsafe search from all providers (health checks bypassed)');
+
+    const allAdapters = Array.from(this.adapters.values());
+    const results = await Promise.allSettled(
+      allAdapters.map(adapter => adapter.searchPackages(filters))
+    );
+
+    return results.flatMap(result =>
+      result.status === 'fulfilled' ? result.value : []
+    );
+  }
+
+  /**
+   * Get health status for all providers
+   */
+  getProvidersHealthStatus() {
+    return this.healthService.getAllHealthStatus();
   }
 }

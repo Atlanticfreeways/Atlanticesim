@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 async function main() {
   // Create default admin user
   const hashedPassword = await bcrypt.hash('Admin123!', 10);
-  
+
   const adminUser = await prisma.user.upsert({
     where: { email: 'admin@atlanticesim.com' },
     update: {},
@@ -101,7 +101,22 @@ async function main() {
     },
   });
 
-  console.log('Seeded providers:', { airalo, mayaMobile, esimcard, breeze, holafly });
+  const esimGo = await prisma.provider.upsert({
+    where: { slug: 'esim-go' },
+    update: {},
+    create: {
+      name: 'eSIM Go',
+      slug: 'esim-go',
+      apiBaseUrl: 'https://api.esim-go.com/v2.4',
+      isActive: true,
+      config: {
+        apiKey: process.env.ESIM_GO_API_KEY || 'test-key',
+        sandbox: true,
+      },
+    },
+  });
+
+  console.log('Seeded providers:', { airalo, mayaMobile, esimcard, breeze, holafly, esimGo });
 }
 
 main()

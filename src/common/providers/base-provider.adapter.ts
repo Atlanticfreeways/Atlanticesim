@@ -20,14 +20,14 @@ export abstract class BaseProviderAdapter implements IProviderAdapter {
     protected readonly apiKey: string;
     protected readonly context: string;
 
-    constructor(providerName: string, baseUrl: string, apiKey: string) {
+    constructor(providerName: string, baseUrl: string, apiKey: string, httpClient?: AxiosInstance) {
         this.providerName = providerName;
         this.baseUrl = baseUrl;
         this.apiKey = apiKey;
         this.context = `${providerName}Adapter`;
         this.logger = new Logger(this.context);
 
-        this.httpClient = axios.create({
+        this.httpClient = httpClient || axios.create({
             baseURL: this.baseUrl,
             timeout: 10000, // 10s timeout
             headers: {
@@ -35,8 +35,11 @@ export abstract class BaseProviderAdapter implements IProviderAdapter {
             },
         });
 
-        this.setupInterceptors();
-        this.setupAuthHeader();
+        if (!httpClient) {
+            this.setupInterceptors();
+            // Removed setupAuthHeader() from constructor to avoid DI race conditions in subclasses.
+            // Subclasses should call this in their methods or constructor as appropriate.
+        }
     }
 
     /**
@@ -93,28 +96,55 @@ export abstract class BaseProviderAdapter implements IProviderAdapter {
     }
 
     /**
-     * Standard health check implementation. Can be overridden.
+     * Standard health check implementation with timeout and better error handling.
+     * Subclasses can override this for provider-specific health checks.
      */
     async checkHealth(): Promise<ProviderHealth> {
         const startTime = Date.now();
+        const providerName = this.providerName;
+
         try {
-            // Try to hit a lightweight endpoint, defaulting to system check or root
-            // Subclasses should ensure this endpoint exists or override this method
-            await this.httpClient.get('/status');
+            // Try to hit a lightweight endpoint with timeout
+            const healthCheckPromise = this.httpClient.get('/status', {
+                timeout: 5000,
+                validateStatus: (status) => status < 500, // Accept any non-5xx as "alive"
+            });
+
+            const timeoutPromise = new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error('Health check timeout')), 5000)
+            );
+
+            await Promise.race([healthCheckPromise, timeoutPromise]);
 
             return {
                 isAvailable: true,
                 responseTime: Date.now() - startTime,
                 lastChecked: new Date(),
-                provider: this.providerName,
+                provider: providerName,
             };
         } catch (error) {
+            const responseTime = Date.now() - startTime;
+            let errorMessage = error.message;
+
+            // Provide more context for common errors
+            if (error.code === 'ECONNREFUSED') {
+                errorMessage = 'Connection refused - service may be down';
+            } else if (error.code === 'ETIMEDOUT' || error.message.includes('timeout')) {
+                errorMessage = 'Request timeout - service is slow or unresponsive';
+            } else if (error.response?.status === 401 || error.response?.status === 403) {
+                errorMessage = 'Authentication failed - check API credentials';
+            } else if (error.response?.status >= 500) {
+                errorMessage = `Server error: ${error.response.status}`;
+            }
+
+            this.logger.warn(`Health check failed for ${providerName}: ${errorMessage}`);
+
             return {
                 isAvailable: false,
-                responseTime: Date.now() - startTime,
+                responseTime,
                 lastChecked: new Date(),
-                errorMessage: error.message,
-                provider: this.providerName,
+                errorMessage,
+                provider: providerName,
             };
         }
     }

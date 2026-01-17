@@ -1,30 +1,26 @@
-import { Controller, Get, Query, Param } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import { Controller, Get, Query, Param, UseGuards, ValidationPipe } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PackagesService } from './packages.service';
+import { SearchPackagesDto } from './dto/search-packages.dto';
 
 @ApiTags('Packages')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('packages')
 export class PackagesController {
-  constructor(private packagesService: PackagesService) {}
+  constructor(private packagesService: PackagesService) { }
 
   @ApiOperation({ summary: 'Search packages' })
-  @ApiQuery({ name: 'countries', required: false, type: String })
-  @ApiQuery({ name: 'minData', required: false, type: Number })
-  @ApiQuery({ name: 'maxPrice', required: false, type: Number })
   @Get()
-  async searchPackages(
-    @Query('countries') countries?: string,
-    @Query('minData') minData?: number,
-    @Query('maxPrice') maxPrice?: number,
-    @Query('hasVoice') hasVoice?: boolean,
-  ) {
+  async searchPackages(@Query() query: SearchPackagesDto) {
     const filters = {
-      countries: countries ? countries.split(',') : undefined,
-      minData,
-      maxPrice,
-      hasVoice,
+      countries: query.countries ? query.countries.split(',') : undefined,
+      minData: query.minData,
+      maxPrice: query.maxPrice,
+      hasVoice: query.hasVoice,
     };
-    
+
     return this.packagesService.searchPackages(filters);
   }
 

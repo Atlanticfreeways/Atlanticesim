@@ -23,6 +23,8 @@ model User {
   preferences UserPreferences?
 
   @@map("users")
+  @@index([email])
+  @@index([createdAt])
 }
 
 model UserPreferences {
@@ -81,6 +83,7 @@ model Package {
   orders   Order[]
 
   @@unique([providerId, providerPackageId])
+  @@index([providerId])
   @@map("packages")
 }
 
@@ -97,6 +100,7 @@ model Order {
   paymentStatus   PaymentStatus @default(PENDING)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+  meta            Json?
 
   user     User     @relation(fields: [userId], references: [id])
   package  Package  @relation(fields: [packageId], references: [id])
@@ -104,6 +108,9 @@ model Order {
   esim     ESim?
 
   @@map("orders")
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model ESim {

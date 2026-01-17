@@ -12,13 +12,40 @@ export class OrdersService {
   ) { }
 
   async createOrder(userId: string, createOrderDto: CreateOrderDto) {
-    const { packageId, providerId, paymentMethod } = createOrderDto;
+    const { packageId, providerId, paymentMethod, idempotencyKey } = createOrderDto;
 
-    // Get package details from provider
+    // 1. Idempotency Check
+    if (idempotencyKey) {
+      const existingOrder = await this.prisma.order.findFirst({
+        where: {
+          userId,
+          meta: {
+            path: ['idempotencyKey'],
+            equals: idempotencyKey,
+          },
+        },
+        include: { package: true, provider: true, esim: true },
+      });
+
+      if (existingOrder) {
+        return existingOrder;
+      }
+    }
+
+    // 2. Validate Package and Provider
     const adapter = this.providersService.getAdapter(providerId);
-    const packageDetails = await adapter.getPackageDetails(packageId);
+    let packageDetails;
+    try {
+      packageDetails = await adapter.getPackageDetails(packageId);
+    } catch (error) {
+      throw new NotFoundException(`Package ${packageId} not found with provider ${providerId}`);
+    }
 
-    // Create order in database
+    if (!packageDetails.isActive) {
+      throw new Error(`Package ${packageId} is currently not active`);
+    }
+
+    // 3. Create Pending Order
     const order = await this.prisma.order.create({
       data: {
         userId,
@@ -28,6 +55,7 @@ export class OrdersService {
         paymentCurrency: packageDetails.currency,
         paymentMethod: paymentMethod || 'card',
         status: OrderStatus.PENDING,
+        meta: idempotencyKey ? { idempotencyKey } : {},
       },
       include: {
         package: true,
@@ -35,7 +63,7 @@ export class OrdersService {
       },
     });
 
-    // Create order with provider
+    // 4. Process Order with Provider
     try {
       const providerOrder = await adapter.createOrder({
         packageId,
@@ -44,12 +72,14 @@ export class OrdersService {
         quantity: 1
       });
 
-      // Update order with provider response
+      // 5. Update Order with Success
+      const currentMeta = (order.meta as Record<string, any>) || {};
       const updatedOrder = await this.prisma.order.update({
         where: { id: order.id },
         data: {
           status: OrderStatus.PROCESSING,
           transactionId: providerOrder.providerOrderId,
+          meta: { ...currentMeta, providerMeta: providerOrder.meta },
         },
         include: {
           package: true,
@@ -57,7 +87,7 @@ export class OrdersService {
         },
       });
 
-      // Create eSIM if provided
+      // 6. Handle eSIM creation
       if (providerOrder.esim) {
         await this.prisma.eSim.create({
           data: {
@@ -75,10 +105,16 @@ export class OrdersService {
 
       return updatedOrder;
     } catch (error) {
-      // Update order status to failed
+      // 7. Handle Failure
       await this.prisma.order.update({
         where: { id: order.id },
-        data: { status: OrderStatus.FAILED },
+        data: {
+          status: OrderStatus.FAILED,
+          meta: {
+            ...(order.meta as Record<string, any>),
+            error: error.message
+          }
+        },
       });
       throw error;
     }

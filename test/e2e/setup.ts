@@ -15,6 +15,7 @@ export async function setupE2ETest(): Promise<{
   }).compile();
 
   app = moduleFixture.createNestApplication();
+  app.setGlobalPrefix('api/v1');
   await app.init();
 
   prismaService = moduleFixture.get<PrismaService>(PrismaService);

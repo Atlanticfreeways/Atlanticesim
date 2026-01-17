@@ -14,4 +14,9 @@ export class CreateOrderDto {
   @IsOptional()
   @IsString()
   paymentMethod?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  idempotencyKey?: string;
 }
