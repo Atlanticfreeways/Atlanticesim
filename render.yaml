@@ -21,12 +21,26 @@ services:
         generateValue: true
       - key: ENCRYPTION_KEY
         generateValue: true
-      # You need to manually add these sensitive keys in the Render Dashboard after creation
       - key: AIRALO_CLIENT_ID
         sync: false
       - key: AIRALO_CLIENT_SECRET
         sync: false
       - key: ESIM_GO_API_KEY
+        sync: false
+      # Additional keys from .env
+      - key: PAYSTACK_PUBLIC_KEY
+        sync: false
+      - key: PAYSTACK_SECRET_KEY
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM_EMAIL
         sync: false
 
 databases:
