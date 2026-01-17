@@ -27,6 +27,7 @@ import { validationSchema } from './config/env.validation';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
+      ignoreEnvFile: process.env.NODE_ENV === 'production',
       validationSchema: validationSchema,
       validationOptions: {
         abortEarly: true,
