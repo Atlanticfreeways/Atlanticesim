@@ -43,7 +43,21 @@ For Business Partners, Atlantic functions as a Clearing House:
 
 ---
 
-## 3. Inventory Scalability
+## 3. Quantitative Projections (User Scaling)
+
+The following table projects the monthly revenue and gross profit based on an average consumption profile of 1 transaction (3GB package) per user per month.
+
+| User Count | Total Investment (Wholesale) | Gross Revenue (Retail) | Monthly Gross Profit | Annual Projected Profit |
+| :--- | :--- | :--- | :--- | :--- |
+| **50 Users** | $375.00 | $600.00 | **$225.00** | $2,700.00 |
+| **100 Users** | $750.00 | $1,200.00 | **$450.00** | $5,400.00 |
+| **500 Users** | $3,750.00 | $6,000.00 | **$2,250.00** | $27,000.00 |
+
+*Assumptions: Standard $12 retail price / $7.50 wholesale cost. Projections exclude operational overhead and focus on gross margin logic.*
+
+---
+
+## 4. Inventory Scalability
 
 The Atlantic architecture allows for "Provider Hot-Swapping":
 * **Zero Downtime Onboarding**: New telco providers can be integrated via the `IProviderAdapter` without altering the core B2B API.
