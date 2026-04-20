@@ -45,26 +45,61 @@ For Business Partners, Atlantic functions as a Clearing House:
 
 ## 3. Quantitative Projections (Net ROI)
 
-The following table projects the **Net Profit** after accounting for both the Cost of Goods Sold (Wholesale) and Operational Expenses (Transaction Fees + Infrastructure).
+The following model projects the **Monthly Net Profit** after accounting for the Cost of Goods Sold (Wholesale), Transaction Fees, and the infrastructure overhead of a cloud deployment (AWS/DigitalOcean).
 
-### Monthly Financial Model
-
-| User Count | Gross Revenue ($12/ea) | Wholesale Cost ($7.50/ea) | Payment Fees (3.5%) | Fixed OpEx (Hosting/DB) | **Net Monthly Profit** |
+| User Tiers | Monthly Revenue | Wholesale (COGS) | Payment Fees (3.5%) | Server/DB (OpEx) | **Net Monthly Profit** |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **50 Users** | $600.00 | $375.00 | $21.00 | $50.00 | **$154.00** |
-| **100 Users** | $1,200.00 | $750.00 | $42.00 | $50.00 | **$358.00** |
-| **500 Users** | $6,000.00 | $3,750.00 | $210.00 | $80.00* | **$1,960.00** |
+| **50 Users** | $600.00 | $375.00 | $21.00 | $30.00 | **$174.00** |
+| **100 Users** | $1,200.00 | $750.00 | $42.00 | $30.00 | **$378.00** |
+| **500 Users** | $6,000.00 | $3,750.00 | $210.00 | $55.00 | **$1,985.00** |
 
-*\*Fixed OpEx is projected to scale slightly at 500 users to accommodate higher database and logging throughput.*
-
-### Expense Breakdown Logic
-1.  **Payment Processing (3.5%)**: Covers transaction fees for Stripe, Paystack, or Crypto gateways.
-2.  **Fixed Infrastructure ($50-$80)**: Covers Render/AWS compute instances, managed PostgreSQL, and Redis cache for BullMQ.
-3.  **Support Margin**: At the 500-user tier, the increased margin allows for the integration of automated ticketing systems or decentralized customer support tools.
+*Note: Infrastructure costs are projected using the AWS Lightsail/DigitalOcean high-efficiency models detailed in Section 4.*
 
 ---
 
-## 4. Inventory Scalability
+## 4. Infrastructure & Deployment Analysis
+
+Atlantic is designed for high-availability cloud deployment. Below is a comparison of the primary infrastructure choices for the current stack.
+
+### Option A: AWS Lightsail (Integrated Path)
+*   **Application Instance**: 2GB RAM / 1 vCPU — $10.00/mo
+*   **Managed PostgreSQL**: 1GB RAM High-Availability — $15.00/mo
+*   **SSL & DNS**: Managed via Lightsail CDN / Route 53 — ~$1.00/mo
+*   **Monthly Infrastructure Total**: **~$26.00**
+
+### Option B: DigitalOcean (Global Simplicity)
+*   **Basic Droplet**: 2GB RAM / 1 vCPU — $12.00/mo
+*   **Managed Database**: PostgreSQL 15 — $15.00/mo
+*   **Spaces (Object Storage)**: For QR code/PDF logs — $5.00/mo
+*   **Monthly Infrastructure Total**: **~$32.00**
+
+### Initial Launch Capital (CapEx)
+To launch the production instance, the following one-time or annual expenses are required:
+*   **Domain Purchase (.com / .io)**: $15.00 (Annual)
+*   **Branding & Asset Design**: $0.00 (Self-contained in Phase 10)
+*   **Provider Security Deposits**: $0.00 - $500.00 (Varies by provider logic)
+*   **Estimated Launch CapEx**: **~$15.00 - $515.00**
+
+---
+
+## 5. Investor & Partnership Planning
+
+As an institutional aggregator, Atlantic offers clear entry points for strategic investment.
+
+### Breakeven Analysis
+Based on a fixed OpEx of ~$45/month (Server + Misc) and a net unit margin of ~$4.10 per activation, the platform reaches **Cash Flow Neutrality at 11 activations per month**. 
+
+### Partnership Tiers
+1.  **Seed Investor (Capital Provision)**: Equity-based participation targeting the scaling of the "Float" (Partner Wallet) liquidity and initial mainnet marketing.
+2.  **Strategic Partner (Channel Reseller)**: Business partners who utilize the Atlantic API to power their own apps (B2B2C). Partners benefit from custom Margin Overrides and priority eSIM provisioning.
+3.  **Technology Partner (Upstream Provider)**: Direct Route-1 access providers who integrate into the Atlantic Aggregator to gain immediate access to our reseller network.
+
+### Exit Strategy
+The platform is built on an asset-light, high-automation codebase. The primary exit strategy is acquisition by a Tier-1 Global MVNO or a Telecommunications Giant looking to modernize their legacy eSIM distribution infrastructure with an AI-driven aggregator.
+
+---
+
+## 6. Inventory Scalability
 
 The Atlantic architecture allows for "Provider Hot-Swapping":
 * **Zero Downtime Onboarding**: New telco providers can be integrated via the `IProviderAdapter` without altering the core B2B API.
