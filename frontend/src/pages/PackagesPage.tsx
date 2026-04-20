@@ -9,7 +9,15 @@ export const PackagesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCountry, setSelectedCountry] = useState('');
   const [hasVoice, setHasVoice] = useState<boolean | undefined>();
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
 
+  const { data: packages, isLoading } = useQuery(
+    ['packages', { countries: selectedCountry, hasVoice }],
+    () => packagesApi.search({ 
+      countries: selectedCountry || undefined,
+      hasVoice 
+    })
+  );
   const { data: packages, isLoading } = useQuery(
     ['packages', { countries: selectedCountry, hasVoice }],
     () => packagesApi.search({ 
@@ -36,53 +44,80 @@ export const PackagesPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">eSIM Packages</h1>
+      {/* Header Section */}
+      <div className="bg-gradient-to-br from-blue-700 to-indigo-900 rounded-[2rem] p-10 text-white shadow-xl relative overflow-hidden">
+        <div className="relative z-10 max-w-2xl">
+          <h1 className="text-4xl font-extrabold mb-4 tracking-tight">Find Your Global Connection</h1>
+          <p className="text-blue-100 text-lg mb-8 opacity-90">Compare 500+ eSIM routes across 190 countries. AI-optimized for the best speed and price.</p>
+          
+          <div className="flex flex-col md:flex-row gap-2 bg-white/10 backdrop-blur-md p-2 rounded-2xl border border-white/20">
+            <div className="flex-1 relative">
+                <Search className="absolute left-4 top-3.5 w-5 h-5 text-blue-200" />
+                <input
+                  type="text"
+                  placeholder="Where are you going?"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full bg-transparent border-none text-white placeholder:text-blue-200 focus:ring-0 pl-12 py-3 text-lg"
+                />
+            </div>
+            <button className="bg-blue-500 hover:bg-blue-400 text-white font-bold px-8 py-3 rounded-xl transition-all shadow-lg active:scale-95">
+                Search
+            </button>
+          </div>
+        </div>
+        <div className="absolute right-[-50px] top-[-50px] w-96 h-96 bg-blue-500/20 rounded-full blur-3xl" />
       </div>
 
-      {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search packages or countries..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 w-full rounded-md border-gray-300"
-            />
-          </div>
-          
-          <select
-            value={selectedCountry}
-            onChange={(e) => setSelectedCountry(e.target.value)}
-            className="rounded-md border-gray-300"
-          >
-            <option value="">All Countries</option>
-            <option value="US">United States</option>
-            <option value="UK">United Kingdom</option>
-            <option value="JP">Japan</option>
-            <option value="DE">Germany</option>
-          </select>
-          
-          <select
-            value={hasVoice?.toString() || ''}
-            onChange={(e) => setHasVoice(
-              e.target.value === '' ? undefined : e.target.value === 'true'
-            )}
-            className="rounded-md border-gray-300"
-          >
-            <option value="">All Types</option>
-            <option value="false">Data Only</option>
-            <option value="true">Data + Voice</option>
-          </select>
-          
-          <button className="flex items-center gap-2 bg-gray-100 px-4 py-2 rounded-md">
+      {/* Quick Filters */}
+      <div className="flex flex-wrap items-center gap-4 py-2">
+           <div className="flex items-center gap-2 bg-white border border-gray-100 px-4 py-2 rounded-full shadow-sm">
+                <span className="text-xs font-bold text-gray-400 uppercase">Country</span>
+                <select
+                    value={selectedCountry}
+                    onChange={(e) => setSelectedCountry(e.target.value)}
+                    className="border-none bg-transparent text-sm font-bold text-gray-900 focus:ring-0 p-0"
+                >
+                    <option value="">All Regions</option>
+                    <option value="US">USA</option>
+                    <option value="UK">United Kingdom</option>
+                    <option value="JP">Japan</option>
+                    <option value="DE">Germany</option>
+                    <option value="FR">France</option>
+                </select>
+           </div>
+
+           <div className="flex items-center gap-2 bg-white border border-gray-100 px-4 py-2 rounded-full shadow-sm">
+                <span className="text-xs font-bold text-gray-400 uppercase">Plan Type</span>
+                <div className="flex gap-1">
+                    <button 
+                        onClick={() => setHasVoice(undefined)}
+                        className={`text-xs px-3 py-1 rounded-full transition-all ${hasVoice === undefined ? 'bg-blue-600 text-white' : 'hover:bg-gray-50'}`}
+                    >
+                        All
+                    </button>
+                    <button 
+                        onClick={() => setHasVoice(false)}
+                        className={`text-xs px-3 py-1 rounded-full transition-all ${hasVoice === false ? 'bg-blue-600 text-white' : 'hover:bg-gray-50'}`}
+                    >
+                        Data Only
+                    </button>
+                    <button 
+                        onClick={() => setHasVoice(true)}
+                        className={`text-xs px-3 py-1 rounded-full transition-all ${hasVoice === true ? 'bg-blue-600 text-white' : 'hover:bg-gray-50'}`}
+                    >
+                        Voice + Data
+                    </button>
+                </div>
+           </div>
+
+           <button 
+            onClick={() => setIsFilterDrawerOpen(true)}
+            className="ml-auto flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded-full font-bold text-sm hover:bg-gray-800 transition-all shadow-md active:scale-95"
+           >
             <Filter className="w-4 h-4" />
-            More Filters
-          </button>
-        </div>
+            Advanced Filters
+           </button>
       </div>
 
       {/* Packages Grid */}

@@ -7,6 +7,8 @@ import * as timeout from 'connect-timeout';
 import { loggerConfig } from './config/logger.config';
 import helmet from 'helmet';
 import * as compression from 'compression';
+import * as cookieParser from 'cookie-parser';
+import * as csurf from 'csurf';
 
 async function bootstrap() {
   console.log('ENV DEBUG: Keys available:', Object.keys(process.env).sort());
@@ -34,6 +36,19 @@ async function bootstrap() {
       includeSubDomains: true,
       preload: true,
     },
+  }));
+
+  // Setup Cookie Parser
+  app.use(cookieParser());
+
+  // Setup Cross-Site Request Forgery Protection (Wait until users authenticate)
+  // We use Cookie for CSRF tokens without breaking the API state
+  app.use(csurf({
+    cookie: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+    }
   }));
 
   // Request Timeout Protection (30s)

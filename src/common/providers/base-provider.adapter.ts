@@ -12,18 +12,29 @@ import {
     ESIMDetails,
 } from '../interfaces/provider.interface';
 
+import { PrismaService } from '../../../config/prisma.service';
+import { EncryptionUtil } from '../../utils/encryption.util';
+
 export abstract class BaseProviderAdapter implements IProviderAdapter {
     protected readonly logger: Logger;
     protected readonly httpClient: AxiosInstance;
     protected readonly providerName: string;
     protected readonly baseUrl: string;
-    protected readonly apiKey: string;
+    protected apiKey: string;
     protected readonly context: string;
+    protected readonly prisma: PrismaService;
 
-    constructor(providerName: string, baseUrl: string, apiKey: string, httpClient?: AxiosInstance) {
+    constructor(
+      providerName: string, 
+      baseUrl: string, 
+      apiKey: string, 
+      httpClient?: AxiosInstance,
+        prisma?: PrismaService
+    ) {
         this.providerName = providerName;
         this.baseUrl = baseUrl;
         this.apiKey = apiKey;
+        this.prisma = prisma;
         this.context = `${providerName}Adapter`;
         this.logger = new Logger(this.context);
 
@@ -43,11 +54,28 @@ export abstract class BaseProviderAdapter implements IProviderAdapter {
     }
 
     /**
-     * Configure authentication header. Can be overridden by subclasses if different auth scheme is needed.
+     * Configure authentication header. 
+     * Asynchronously loads the API key from the database and decrypts it.
      */
-    protected setupAuthHeader(): void {
+    protected async setupAuthHeader(): Promise<void> {
+        if (!this.apiKey && this.prisma) {
+            const providerSlug = this.providerName.toLowerCase().replace(/\s+/g, '-');
+            const providerRecord = await this.prisma.provider.findUnique({ where: { slug: providerSlug } });
+            
+            if (providerRecord && providerRecord.config) {
+                const config = providerRecord.config as any;
+                if (config.apiKey) {
+                    try {
+                        this.apiKey = EncryptionUtil.decrypt(config.apiKey);
+                    } catch (e) {
+                         // Fallback to raw key if decryption fails (e.g., legacy seed)
+                         this.apiKey = config.apiKey;
+                    }
+                }
+            }
+        }
+
         if (this.apiKey) {
-            // Default to Bearer token, override in subclass if needed (e.g., 'X-API-Key')
             this.httpClient.defaults.headers.common['Authorization'] = `Bearer ${this.apiKey}`;
         }
     }

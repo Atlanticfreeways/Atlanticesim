@@ -3,9 +3,11 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { RegisterDto, LoginDto } from './dto/auth.dto';
+import { Throttle } from '@nestjs/throttler';
 
 @ApiTags('Authentication')
 @Controller('auth')
+@Throttle({ default: { limit: 5, ttl: 300000 } }) // 5 requests per 5 minutes
 export class AuthController {
   constructor(private authService: AuthService) {}
 

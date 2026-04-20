@@ -10,7 +10,7 @@
  * - Error boundary support
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DashboardFooter } from '@/components/dashboard/DashboardFooter';
@@ -18,15 +18,19 @@ import { StatsCard } from '@/components/dashboard/StatsCard';
 import { MyESIMsSection } from '@/components/dashboard/MyESIMsSection';
 import { RecentOrdersTable } from '@/components/dashboard/RecentOrdersTable';
 import { QuickActionsBar } from '@/components/dashboard/QuickActionsBar';
+import { QRModal } from '@/components/dashboard/QRModal';
+import { TopUpModal } from '@/components/dashboard/TopUpModal';
+import { WalletDepositModal } from '@/components/partners/WalletDepositModal';
 import { useDashboard } from '@/hooks/useDashboard';
+import { useAuth } from '@/hooks/useAuth';
 
 /**
  * Error state component
  */
 const ErrorState: React.FC<{ error: Error; onRetry: () => void }> = ({ error, onRetry }) => (
   <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-    <div className="text-center">
-      <h1 className="text-3xl font-bold text-gray-900 mb-2">Oops! Something went wrong</h1>
+    <div className="text-center text-gray-900">
+      <h1 className="text-3xl font-bold mb-2">Oops! Something went wrong</h1>
       <p className="text-gray-600 mb-4">{error.message}</p>
       <button
         onClick={onRetry}
@@ -60,7 +64,13 @@ const StatsCardsSkeleton: React.FC = () => (
  */
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const { data, isLoading, error, refetch } = useDashboard();
+  
+  // Modal states
+  const [activeQR, setActiveQR] = useState<{ id: string, code: string } | null>(null);
+  const [activeTopUp, setActiveTopUp] = useState<string | null>(null);
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
 
   /**
    * Handle retry on error
@@ -77,12 +87,15 @@ export const Dashboard: React.FC = () => {
   }, [navigate]);
 
   /**
-   * Handle top up (show modal or navigate)
+   * Handle top up
    */
-  const handleTopUp = useCallback(() => {
-    // TODO: Implement top-up modal
-    alert('Top-up feature coming soon');
-  }, []);
+  const handleTopUp = useCallback((esimId?: string) => {
+    if (user?.role === 'BUSINESS_PARTNER' && !esimId) {
+      setIsWalletModalOpen(true);
+    } else {
+      setActiveTopUp(esimId || 'general');
+    }
+  }, [user?.role]);
 
   /**
    * Handle support navigation
@@ -128,9 +141,8 @@ export const Dashboard: React.FC = () => {
   /**
    * Handle show QR code
    */
-  const handleShowQR = useCallback((esimId: string) => {
-    // TODO: Implement QR code modal
-    alert(`QR Code for eSIM: ${esimId}`);
+  const handleShowQR = useCallback((esimId: string, code?: string) => {
+    setActiveQR({ id: esimId, code: code || 'LPA:1$smdp.example.com$TEST-CODE' });
   }, []);
 
   /**
@@ -141,48 +153,12 @@ export const Dashboard: React.FC = () => {
   }, [navigate]);
 
   /**
-   * Handle help click
-   */
-  const handleHelpClick = useCallback(() => {
-    navigate('/help');
-  }, [navigate]);
-
-  /**
-   * Handle support click
-   */
-  const handleSupportClick = useCallback(() => {
-    navigate('/support');
-  }, [navigate]);
-
-  /**
-   * Handle terms click
-   */
-  const handleTermsClick = useCallback(() => {
-    window.open('/terms', '_blank');
-  }, []);
-
-  /**
-   * Handle privacy click
-   */
-  const handlePrivacyClick = useCallback(() => {
-    window.open('/privacy', '_blank');
-  }, []);
-
-  /**
-   * Handle profile click
-   */
-  const handleProfileClick = useCallback(() => {
-    navigate('/profile');
-  }, [navigate]);
-
-  /**
    * Handle logout
    */
   const handleLogout = useCallback(() => {
-    // TODO: Implement logout
-    localStorage.removeItem('token');
+    logout();
     navigate('/login');
-  }, [navigate]);
+  }, [logout, navigate]);
 
   /**
    * Handle search
@@ -212,7 +188,7 @@ export const Dashboard: React.FC = () => {
         notificationCount={data?.notificationCount || 0}
         onSearch={handleSearch}
         onNotifications={handleSupport}
-        onProfile={handleProfileClick}
+        onProfile={() => navigate('/profile')}
         onLogout={handleLogout}
         isLoading={isLoading}
       />
@@ -222,21 +198,31 @@ export const Dashboard: React.FC = () => {
         <div className="max-w-7xl mx-auto space-y-8">
           {/* Welcome Section */}
           {!isLoading && (
-            <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg p-6 text-white">
-              <h2 className="text-2xl font-bold mb-2">Welcome to Atlantic eSIM</h2>
-              <p className="text-blue-100">
-                Stay connected anywhere in the world with our global eSIM solutions
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-3xl p-8 text-white shadow-xl shadow-blue-100">
+              <h2 className="text-3xl font-bold mb-2 leading-tight">Hello, {userName}! 👋</h2>
+              <p className="text-blue-100 text-lg opacity-90">
+                You're currently traveler-ready across {data?.stats?.activeCountries || 0} countries.
               </p>
             </div>
           )}
 
           {/* Stats Cards */}
           <section>
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Your Statistics</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-5">At a Glance</h2>
             {isLoading ? (
               <StatsCardsSkeleton />
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-6">
+                {user?.role === 'BUSINESS_PARTNER' && (
+                  <StatsCard
+                    icon="🪙"
+                    label="Wallet Balance"
+                    value={`$${(data?.stats?.walletBalance || 0).toFixed(2)}`}
+                    unit="USD"
+                    isLoading={isLoading}
+                    className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200"
+                  />
+                )}
                 <StatsCard
                   icon="📱"
                   label="Active eSIMs"
@@ -267,7 +253,7 @@ export const Dashboard: React.FC = () => {
               esims={data?.esims || []}
               isLoading={isLoading}
               onViewDetails={handleViewESIMDetails}
-              onShowQR={handleShowQR}
+              onShowQR={(id) => handleShowQR(id, data?.esims?.find(e => e.id === id)?.qrCode)}
               onManage={handleManageESIM}
             />
           </section>
@@ -286,24 +272,85 @@ export const Dashboard: React.FC = () => {
           <section>
             <QuickActionsBar
               onBuyNew={handleBuyNew}
-              onTopUp={handleTopUp}
+              onTopUp={() => handleTopUp()}
               onSupport={handleSupport}
               onSettings={handleSettings}
               isLoading={isLoading}
             />
           </section>
+
+          {/* Partner Specific Actions */}
+          {user?.role === 'BUSINESS_PARTNER' && (
+            <section className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Partner Console</h2>
+                  <p className="text-sm text-gray-500">Manage your B2B aggregation infrastructure</p>
+                </div>
+                <Badge variant="info">Partner Active</Badge>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <button 
+                  onClick={() => navigate('/settings/api')}
+                  className="flex items-center gap-4 p-4 border rounded-xl hover:bg-gray-50 transition-colors"
+                >
+                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 font-bold">API</div>
+                  <div className="text-left">
+                    <p className="font-bold text-gray-900">Developer Keys</p>
+                    <p className="text-xs text-gray-400">View and rotate your x-api-keys</p>
+                  </div>
+                </button>
+                <button 
+                  onClick={() => navigate('/settings/webhooks')}
+                  className="flex items-center gap-4 p-4 border rounded-xl hover:bg-gray-50 transition-colors"
+                >
+                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center text-purple-600 font-bold">WH</div>
+                  <div className="text-left">
+                    <p className="font-bold text-gray-900">Webhooks</p>
+                    <p className="text-xs text-gray-400">Configure real-time event callbacks</p>
+                  </div>
+                </button>
+              </div>
+            </section>
+          )}
         </div>
       </main>
 
       {/* Footer */}
       <DashboardFooter
-        onHelpClick={handleHelpClick}
-        onSupportClick={handleSupportClick}
-        onTermsClick={handleTermsClick}
-        onPrivacyClick={handlePrivacyClick}
+        onHelpClick={() => navigate('/help')}
+        onSupportClick={() => navigate('/support')}
+        onTermsClick={() => window.open('/terms', '_blank')}
+        onPrivacyClick={() => window.open('/privacy', '_blank')}
+      />
+
+      {/* Modals */}
+      <QRModal 
+        isOpen={!!activeQR} 
+        onClose={() => setActiveQR(null)} 
+        esimId={activeQR?.id || ''} 
+        qrCodeValue={activeQR?.code || ''} 
+      />
+
+      <TopUpModal 
+        isOpen={!!activeTopUp} 
+        onClose={() => setActiveTopUp(null)} 
+        esimId={activeTopUp || ''} 
+        onTopUp={(amount) => {
+          console.log(`Top up ${activeTopUp} with ${amount}`);
+          setActiveTopUp(null);
+          navigate(`/checkout/topup/${activeTopUp}?bundle=${amount}`);
+        }} 
+      />
+
+      <WalletDepositModal 
+        isOpen={isWalletModalOpen}
+        onClose={() => setIsWalletModalOpen(false)}
       />
     </div>
   );
 };
+
+Dashboard.displayName = 'Dashboard';
 
 Dashboard.displayName = 'Dashboard';

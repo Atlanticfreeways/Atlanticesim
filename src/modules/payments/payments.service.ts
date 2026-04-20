@@ -1,91 +1,123 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../config/prisma.service';
-import { PaymentStatus, OrderStatus } from '@prisma/client';
-import Stripe from 'stripe';
+import { PaymentStatus, OrderStatus, Order } from '@prisma/client';
+import { PaystackGateway } from './gateways/paystack.gateway';
+import { CryptoGateway } from './gateways/crypto.gateway';
+import { PaymentGateway } from './gateways/payment-gateway.interface';
 
 @Injectable()
 export class PaymentsService {
-  private stripe: Stripe;
+  private readonly logger = new Logger(PaymentsService.name);
+  private readonly gateways: Map<string, PaymentGateway> = new Map();
 
   constructor(
-    private configService: ConfigService,
-    private prisma: PrismaService,
+    private readonly configService: ConfigService,
+    private readonly prisma: PrismaService,
+    private readonly paystackGateway: PaystackGateway,
+    private readonly cryptoGateway: CryptoGateway,
   ) {
-    this.stripe = new Stripe(this.configService.get('STRIPE_SECRET_KEY'), {
-      apiVersion: '2023-10-16',
-    });
+    this.gateways.set('paystack', this.paystackGateway);
+    this.gateways.set('crypto', this.cryptoGateway);
   }
 
-  async createPaymentIntent(orderId: string, userId: string) {
+  async createPaymentSession(orderId: string, userId: string, method: 'paystack' | 'crypto') {
     const order = await this.prisma.order.findFirst({
       where: { id: orderId, userId },
+      include: { package: true }
     });
 
     if (!order) {
-      throw new Error('Order not found');
+      throw new NotFoundException('Order not found');
     }
 
-    const paymentIntent = await this.stripe.paymentIntents.create({
-      amount: Math.round(Number(order.paymentAmount) * 100), // Convert to cents
-      currency: order.paymentCurrency.toLowerCase(),
-      metadata: {
-        orderId: order.id,
-        userId: order.userId,
+    const gateway = this.gateways.get(method);
+    if (!gateway) {
+      throw new BadRequestException(`Payment method ${method} not supported`);
+    }
+
+    const { checkoutUrl, transactionId } = await gateway.createPayment(order);
+
+    await this.prisma.order.update({
+      where: { id: orderId },
+      data: {
+        paymentMethod: method,
+        transactionId: transactionId,
       },
     });
 
-    return {
-      clientSecret: paymentIntent.client_secret,
-      paymentIntentId: paymentIntent.id,
-    };
+    return { checkoutUrl, transactionId };
   }
 
-  async handleWebhook(signature: string, payload: Buffer) {
-    const webhookSecret = this.configService.get('STRIPE_WEBHOOK_SECRET');
-    
-    let event: Stripe.Event;
-    try {
-      event = this.stripe.webhooks.constructEvent(payload, signature, webhookSecret);
-    } catch (err) {
-      throw new Error(`Webhook signature verification failed: ${err.message}`);
+  async verifyPayment(orderId: string) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+    });
+
+    if (!order || !order.paymentMethod || !order.transactionId) {
+      throw new NotFoundException('Order payment information not found');
     }
 
-    switch (event.type) {
-      case 'payment_intent.succeeded':
-        await this.handlePaymentSuccess(event.data.object as Stripe.PaymentIntent);
-        break;
-      case 'payment_intent.payment_failed':
-        await this.handlePaymentFailure(event.data.object as Stripe.PaymentIntent);
-        break;
+    const gateway = this.gateways.get(order.paymentMethod);
+    const isValid = await gateway.verifyPayment(order.transactionId);
+
+    if (isValid) {
+      await this.handlePaymentSuccess(order);
+    } else {
+      await this.handlePaymentFailure(order);
+    }
+
+    return { success: isValid };
+  }
+
+  async handleWebhook(method: string, payload: any) {
+    this.logger.log(`Received webhook for ${method}`);
+    
+    // Webhook logic varies by provider. 
+    // In a production app, we would verify signatures here.
+    
+    let orderId: string;
+    let success = false;
+
+    if (method === 'paystack') {
+      orderId = payload.data.reference;
+      success = payload.event === 'charge.success';
+    } else if (method === 'crypto') {
+      orderId = payload.order_id;
+      success = payload.payment_status === 'finished';
+    }
+
+    if (orderId) {
+      const order = await this.prisma.order.findUnique({ where: { id: orderId } });
+      if (order) {
+        if (success) await this.handlePaymentSuccess(order);
+        else await this.handlePaymentFailure(order);
+      }
     }
 
     return { received: true };
   }
 
-  private async handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
-    const orderId = paymentIntent.metadata.orderId;
-    
+  private async handlePaymentSuccess(order: Order) {
     await this.prisma.order.update({
-      where: { id: orderId },
+      where: { id: order.id },
       data: {
         paymentStatus: PaymentStatus.COMPLETED,
         status: OrderStatus.CONFIRMED,
-        transactionId: paymentIntent.id,
       },
     });
+    this.logger.log(`Payment successful for order ${order.id}`);
   }
 
-  private async handlePaymentFailure(paymentIntent: Stripe.PaymentIntent) {
-    const orderId = paymentIntent.metadata.orderId;
-    
+  private async handlePaymentFailure(order: Order) {
     await this.prisma.order.update({
-      where: { id: orderId },
+      where: { id: order.id },
       data: {
         paymentStatus: PaymentStatus.FAILED,
         status: OrderStatus.FAILED,
       },
     });
+    this.logger.warn(`Payment failed for order ${order.id}`);
   }
 
   async refundPayment(orderId: string, userId: string) {
@@ -93,22 +125,23 @@ export class PaymentsService {
       where: { id: orderId, userId },
     });
 
-    if (!order || !order.transactionId) {
-      throw new Error('Order or transaction not found');
+    if (!order || !order.transactionId || !order.paymentMethod) {
+      throw new NotFoundException('Order or transaction not found');
     }
 
-    const refund = await this.stripe.refunds.create({
-      payment_intent: order.transactionId,
-    });
+    const gateway = this.gateways.get(order.paymentMethod);
+    const success = await gateway.refundPayment(order.transactionId);
 
-    await this.prisma.order.update({
-      where: { id: orderId },
-      data: {
-        paymentStatus: PaymentStatus.REFUNDED,
-        status: OrderStatus.REFUNDED,
-      },
-    });
+    if (success) {
+      await this.prisma.order.update({
+        where: { id: orderId },
+        data: {
+          paymentStatus: PaymentStatus.REFUNDED,
+          status: OrderStatus.REFUNDED,
+        },
+      });
+    }
 
-    return { refundId: refund.id, status: refund.status };
+    return { success };
   }
 }

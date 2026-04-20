@@ -21,6 +21,10 @@ model User {
   orders      Order[]
   esims       ESim[]
   preferences UserPreferences?
+  apiTokens   ApiToken[]
+  wallet      Wallet?
+  partnerProfile PartnerProfile?
+  webhookConfig  WebhookConfig?
 
   @@map("users")
   @@index([email])
@@ -36,6 +40,88 @@ model UserPreferences {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_preferences")
+}
+
+model ApiToken {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  tokenHash   String   @unique
+  lastUsedAt  DateTime?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("api_tokens")
+  @@index([userId])
+}
+
+model Wallet {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  balance     Decimal  @db.Decimal(15, 2) @default(0.00)
+  currency    String   @default("USD")
+  updatedAt   DateTime @updatedAt
+
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions WalletTransaction[]
+
+  @@map("wallets")
+}
+
+model WalletTransaction {
+  id          String           @id @default(cuid())
+  walletId    String
+  amount      Decimal          @db.Decimal(15, 2)
+  type        TransactionType
+  description String?
+  orderId     String?          @unique
+  createdAt   DateTime         @default(now())
+
+  wallet      Wallet @relation(fields: [walletId], references: [id])
+
+  @@map("wallet_transactions")
+  @@index([walletId])
+  @@index([createdAt])
+}
+
+model PartnerProfile {
+  id              String  @id @default(cuid())
+  userId          String  @unique
+  companyName     String?
+  logoUrl         String?
+  primaryColor    String? @default("#000000")
+  supportEmail    String?
+  customDomain    String? @unique
+  wholesaleMargin Decimal @db.Decimal(5, 2) @default(10.00) // Default 10% discount
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("partner_profiles")
+}
+
+model WebhookConfig {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  url         String
+  secret      String   // For HMAC signing
+  isActive    Boolean  @default(true)
+  events      String[] // Array of event names like ["order.completed"]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("webhook_configs")
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  ORDER_PAYMENT
+  REFUND
 }
 
 model Provider {
@@ -84,6 +170,8 @@ model Package {
 
   @@unique([providerId, providerPackageId])
   @@index([providerId])
+  @@index([countries])
+  @@index([isActive])
   @@map("packages")
 }
 
@@ -110,6 +198,7 @@ model Order {
   @@map("orders")
   @@index([userId])
   @@index([status])
+  @@index([userId, status])
   @@index([createdAt])
 }
 
@@ -128,14 +217,32 @@ model ESim {
   dataTotal         Int
   validUntil        DateTime?
   activatedAt       DateTime?
+  lastUsageCheck    DateTime?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
   order    Order    @relation(fields: [orderId], references: [id])
   user     User     @relation(fields: [userId], references: [id])
   provider Provider @relation(fields: [providerId], references: [id])
+  usageHistory UsageUpdate[]
 
   @@map("esims")
+  @@index([iccid])
+  @@index([status])
+  @@index([userId])
+}
+
+model UsageUpdate {
+  id          String   @id @default(cuid())
+  esimId      String
+  dataUsed    Int      // In MB
+  timestamp   DateTime @default(now())
+
+  esim        ESim     @relation(fields: [esimId], references: [id], onDelete: Cascade)
+
+  @@map("usage_updates")
+  @@index([esimId])
+  @@index([timestamp])
 }
 
 enum UserRole {

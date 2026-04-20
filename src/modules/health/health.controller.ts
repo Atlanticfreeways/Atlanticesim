@@ -1,14 +1,16 @@
 import { Controller, Get, Injectable } from '@nestjs/common';
-import {
-    HealthCheck,
-    HealthCheckService,
-    PrismaHealthIndicator,
-    HealthIndicator,
-    HealthIndicatorResult,
-    HealthCheckError
+import { 
+    HealthCheck, 
+    HealthCheckService, 
+    PrismaHealthIndicator, 
+    HealthIndicator, 
+    HealthIndicatorResult, 
+    HealthCheckError 
 } from '@nestjs/terminus';
 import { ProviderHealthService } from '../providers/provider-health.service';
 import { PrismaService } from '../../config/prisma.service';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
 
 @Injectable()
 export class ProvidersHealthIndicator extends HealthIndicator {
@@ -48,6 +50,7 @@ export class HealthController {
         private db: PrismaHealthIndicator,
         private providersIndicator: ProvidersHealthIndicator,
         private prisma: PrismaService,
+        @InjectQueue('activations') private activationQueue: Queue,
     ) { }
 
     @Get()
@@ -56,6 +59,15 @@ export class HealthController {
         return this.health.check([
             () => this.db.pingCheck('database', this.prisma),
             () => this.providersIndicator.isHealthy('providers'),
+            async () => {
+                const counts = await this.activationQueue.getJobCounts();
+                return {
+                    queues: {
+                        status: counts.waiting < 100 ? 'up' : 'down',
+                        activations: counts
+                    }
+                };
+            }
         ]);
     }
 }

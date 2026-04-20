@@ -1,4 +1,6 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, Inject } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { PrismaService } from '../../config/prisma.service';
 import { AiraloAdapter } from './adapters/airalo.adapter';
 import { MayaMobileAdapter } from './adapters/maya-mobile.adapter';
@@ -17,6 +19,7 @@ export class ProvidersService implements OnModuleInit {
   constructor(
     private prisma: PrismaService,
     private healthService: ProviderHealthService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
     private airaloAdapter: AiraloAdapter,
     private esimGoAdapter: EsimGoAdapter,
     private mayaMobileAdapter: MayaMobileAdapter,
@@ -68,6 +71,17 @@ export class ProvidersService implements OnModuleInit {
    * Automatically filters out unhealthy providers to prevent cascading failures
    */
   async searchFromAllProviders(filters: any): Promise<any[]> {
+    // 1. Deterministic Cache Key Generation
+    const cacheKey = `packages:search:${JSON.stringify(filters)}`;
+    const cachedPackages = await this.cacheManager.get<any[]>(cacheKey);
+
+    if (cachedPackages) {
+      this.logger.debug(`[CACHE HIT] Returning ${cachedPackages.length} packages from cache for key: ${cacheKey}`);
+      return cachedPackages;
+    }
+
+    this.logger.debug(`[CACHE MISS] Fetching fresh packages for key: ${cacheKey}`);
+
     // Get only healthy provider IDs
     const healthyProviderIds = this.healthService.getHealthyProviderIds();
 
@@ -107,6 +121,41 @@ export class ProvidersService implements OnModuleInit {
     });
 
     this.logger.log(`Retrieved ${packages.length} packages from ${healthyAdapters.length} providers`);
+    
+    // 2. AI Smart-Select: Identify Best Value routes
+    const smartPackages = this.applySmartSelect(packages);
+    
+    // Store result in cache (TTL is set globally to 5 minutes)
+    await this.cacheManager.set(cacheKey, smartPackages);
+    
+    return smartPackages;
+  }
+
+  /**
+   * AI Post-Processor: Flags the cheapest packages in their respective tiers
+   */
+  private applySmartSelect(packages: any[]): any[] {
+    // Tier packages by dataAmount (e.g., 1000MB, 5000MB)
+    const tiers: Record<number, any[]> = {};
+    
+    packages.forEach(pkg => {
+      // Normalize to MB for comparison
+      const normalizedSize = pkg.dataUnit === 'GB' ? pkg.dataAmount * 1024 : pkg.dataAmount;
+      if (!tiers[normalizedSize]) tiers[normalizedSize] = [];
+      tiers[normalizedSize].push(pkg);
+    });
+
+    // In each tier, find the cheapest price
+    Object.keys(tiers).forEach(size => {
+      const tierPackages = tiers[Number(size)];
+      if (tierPackages.length > 0) {
+        const minPrice = Math.min(...tierPackages.map(p => p.price));
+        tierPackages.forEach(p => {
+          if (p.price === minPrice) p.isBestValue = true;
+        });
+      }
+    });
+
     return packages;
   }
 

@@ -22,6 +22,7 @@ export interface Package {
   smsCount?: number;
   providerId: string;
   providerName: string;
+  isBestValue?: boolean;
 }
 
 export interface Order {
@@ -43,4 +44,20 @@ export interface ESim {
   dataTotal: number;
   validUntil?: string;
   activatedAt?: string;
+  predictionDepletionDate?: string;
+  velocityPerHour?: number;
+}
+
+export interface Wallet {
+  id: string;
+  balance: number;
+  currency: string;
+}
+
+export interface PartnerProfile {
+  id: string;
+  companyName?: string;
+  logoUrl?: string;
+  primaryColor?: string;
+  wholesaleMargin: number;
 }

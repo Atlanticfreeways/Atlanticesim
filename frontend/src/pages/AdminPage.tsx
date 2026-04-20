@@ -57,10 +57,44 @@ export const AdminPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Queue & Background Health */}
+      <div className="bg-white rounded-lg shadow">
+        <div className="p-6 border-b flex justify-between items-center">
+          <h2 className="text-lg font-semibold">Background Activation Queue</h2>
+          <span className="flex items-center gap-2 text-xs font-bold text-green-600">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-ping" />
+             WORKERS ACTIVE
+          </span>
+        </div>
+        <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="border rounded-xl p-4 bg-gray-50">
+                <p className="text-xs text-gray-400 font-bold uppercase mb-1">Waiting</p>
+                <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-bold text-gray-900">0</span>
+                    <span className="text-xs text-gray-400">jobs</span>
+                </div>
+            </div>
+            <div className="border rounded-xl p-4 bg-blue-50 border-blue-100">
+                <p className="text-xs text-blue-400 font-bold uppercase mb-1">Active</p>
+                <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-bold text-blue-900">0</span>
+                    <span className="text-xs text-blue-400">processing</span>
+                </div>
+            </div>
+            <div className="border rounded-xl p-4 bg-gray-50">
+                <p className="text-xs text-gray-400 font-bold uppercase mb-1">Failed Today</p>
+                <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-bold text-red-600">0</span>
+                    <span className="text-xs text-gray-400">retries scheduled</span>
+                </div>
+            </div>
+        </div>
+      </div>
+
       {/* Provider Health */}
       <div className="bg-white rounded-lg shadow">
         <div className="p-6 border-b">
-          <h2 className="text-lg font-semibold">Provider Health Status</h2>
+          <h2 className="text-lg font-semibold">Provider API Status</h2>
         </div>
         <div className="p-6">
           {providerHealth?.map((provider) => (

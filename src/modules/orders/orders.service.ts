@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../config/prisma.service';
-import { ProvidersService } from '../providers/providers.service';
-import { CreateOrderDto } from './dto/create-order.dto';
+import { OrdersModule } from './orders.module';
+import { CreateUserDto } from '../users/dto/create-user.dto';
+import { UsersService } from '../users/users.service';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
 import { OrderStatus } from '@prisma/client';
 
 @Injectable()
@@ -9,6 +10,8 @@ export class OrdersService {
   constructor(
     private prisma: PrismaService,
     private providersService: ProvidersService,
+    private usersService: UsersService,
+    @InjectQueue('activations') private activationQueue: Queue,
   ) { }
 
   async createOrder(userId: string, createOrderDto: CreateOrderDto) {
@@ -32,7 +35,13 @@ export class OrdersService {
       }
     }
 
-    // 2. Validate Package and Provider
+    // 2. Validate User
+    const user = await this.usersService.findById(userId);
+    if (!user) {
+      throw new NotFoundException(`User ${userId} not found`);
+    }
+
+    // 3. Validate Package and Provider
     const adapter = this.providersService.getAdapter(providerId);
     let packageDetails;
     try {
@@ -45,7 +54,7 @@ export class OrdersService {
       throw new Error(`Package ${packageId} is currently not active`);
     }
 
-    // 3. Create Pending Order
+    // 4. Create Accepted Order (Institutional: Respond fast, process background)
     const order = await this.prisma.order.create({
       data: {
         userId,
@@ -63,61 +72,23 @@ export class OrdersService {
       },
     });
 
-    // 4. Process Order with Provider
-    try {
-      const providerOrder = await adapter.createOrder({
-        packageId,
-        userId,
-        email: 'user@example.com', // TODO: Get from user profile
-        quantity: 1
-      });
+    // 5. Dispatch to BullMQ for Resilient Provider Activation
+    await this.activationQueue.add('activate-esim', {
+      orderId: order.id,
+      providerId: providerId,
+      packageId: packageId,
+      userEmail: user.email,
+      userId: userId,
+    }, {
+      attempts: 3,
+      backoff: {
+        type: 'exponential',
+        delay: 5000,
+      },
+      removeOnComplete: true,
+    });
 
-      // 5. Update Order with Success
-      const currentMeta = (order.meta as Record<string, any>) || {};
-      const updatedOrder = await this.prisma.order.update({
-        where: { id: order.id },
-        data: {
-          status: OrderStatus.PROCESSING,
-          transactionId: providerOrder.providerOrderId,
-          meta: { ...currentMeta, providerMeta: providerOrder.meta },
-        },
-        include: {
-          package: true,
-          provider: true,
-        },
-      });
-
-      // 6. Handle eSIM creation
-      if (providerOrder.esim) {
-        await this.prisma.eSim.create({
-          data: {
-            orderId: updatedOrder.id,
-            userId,
-            providerId,
-            iccid: providerOrder.esim.iccid,
-            qrCode: providerOrder.esim.qrCode,
-            smdpAddress: providerOrder.esim.smdpAddress,
-            activationCode: providerOrder.esim.activationCode,
-            dataTotal: packageDetails.dataAmount * (packageDetails.dataUnit === 'GB' ? 1024 : 1),
-          },
-        });
-      }
-
-      return updatedOrder;
-    } catch (error) {
-      // 7. Handle Failure
-      await this.prisma.order.update({
-        where: { id: order.id },
-        data: {
-          status: OrderStatus.FAILED,
-          meta: {
-            ...(order.meta as Record<string, any>),
-            error: error.message
-          }
-        },
-      });
-      throw error;
-    }
+    return order;
   }
 
   async getUserOrders(userId: string) {

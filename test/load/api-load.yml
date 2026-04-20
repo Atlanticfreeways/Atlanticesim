@@ -1,0 +1,49 @@
+config:
+  target: "http://localhost:3002/api/v1"
+  phases:
+    - duration: 60
+      arrivalRate: 5
+      rampTo: 50
+      name: "Ramp up load"
+    - duration: 60
+      arrivalRate: 50
+      name: "Sustained load"
+  environments:
+    production:
+      target: "https://api.atlanticesim.com/api/v1"
+      phases:
+        - duration: 120
+          arrivalRate: 10
+          rampTo: 100
+          name: "Ramp up load (Prod)"
+        - duration: 300
+          arrivalRate: 100
+          name: "Sustained load (Prod)"
+
+scenarios:
+  - name: "Search packages flow"
+    flow:
+      - get:
+          url: "/packages/search?country=GB"
+          expect:
+            - statusCode: 200
+            - contentType: json
+            - hasProperty: "data"
+      - think: 2
+      - get:
+          url: "/providers/health"
+          expect:
+            - statusCode: 200
+            - contentType: json
+      - think: 1
+      - get:
+          url: "/health"
+          expect:
+            - statusCode: 200
+  - name: "Dashboard endpoints flow (Simulated Auth)"
+    flow:
+      # Assume anonymous / uncontrolled access for load testing read endpoints where auth is mocked or skipped
+      - get:
+          url: "/packages/1"
+          expect:
+            - statusCode: 200

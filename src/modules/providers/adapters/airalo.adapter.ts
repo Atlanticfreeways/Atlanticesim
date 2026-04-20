@@ -13,6 +13,8 @@ import {
   ESIMDetails,
 } from '../../../common/interfaces/provider.interface';
 
+import { PrismaService } from '../../../config/prisma.service';
+
 @Injectable()
 export class AiraloAdapter extends BaseProviderAdapter {
   private accessToken: string | null = null;
@@ -20,13 +22,15 @@ export class AiraloAdapter extends BaseProviderAdapter {
 
   constructor(
     private configService: ConfigService,
+    private prismaService: PrismaService,
     @Optional() httpClient?: any,
   ) {
     super(
       'Airalo',
       configService.get('AIRALO_API_URL') || 'https://sandbox-api.airalo.com/v2',
-      configService.get('AIRALO_API_KEY') || '',
-      httpClient
+      '', // We will lazy-load via Prisma
+      httpClient,
+      prismaService
     );
   }
 
@@ -48,11 +52,21 @@ export class AiraloAdapter extends BaseProviderAdapter {
 
     this.logger.log('Fetching new Airalo access token...');
 
-    const clientId = this.configService.get('AIRALO_CLIENT_ID');
-    const clientSecret = this.configService.get('AIRALO_CLIENT_SECRET');
+    // Fetch credentials from DB or fallback to config
+    const providerRecord = await this.prisma.provider.findUnique({ where: { slug: 'airalo' } });
+    let clientId = this.configService.get('AIRALO_CLIENT_ID');
+    let clientSecret = this.configService.get('AIRALO_CLIENT_SECRET');
+
+    if (providerRecord && providerRecord.config) {
+      const config = providerRecord.config as any;
+      if (config.clientId) clientId = config.clientId;
+      // Depending on implementation, Airalo might only use apiKey field or break it into client_id/secret.
+      // Assuming apiKey stores the client_id:client_secret or similar if needed. We'll fallback to config service mostly here.
+    }
 
     if (!clientId || !clientSecret) {
-      throw new Error('Airalo Client ID or Secret missing in configuration');
+      this.logger.error('Airalo Client ID or Secret missing in configuration. Cannot safely initialize provider.');
+      throw new Error('Institutional Configuration Error: Airalo credentials missing.');
     }
 
     try {

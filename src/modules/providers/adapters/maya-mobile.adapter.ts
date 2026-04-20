@@ -11,21 +11,30 @@ import {
   ESIMDetails,
 } from '../../../common/interfaces/provider.interface';
 
+import { PrismaService } from '../../../config/prisma.service';
+
 @Injectable()
 export class MayaMobileAdapter extends BaseProviderAdapter {
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    private prismaService: PrismaService,
+  ) {
     super(
-      'MayaMobile',
+      'maya-mobile',
       configService.get('MAYA_MOBILE_API_URL') || 'https://api.mayamobile.com/v1',
-      configService.get('MAYA_MOBILE_API_KEY') || '',
+      '',
+      undefined,
+      prismaService
     );
   }
 
   async searchPackages(filters: PackageFilters): Promise<Package[]> {
     this.logger.log(`Searching packages with filters: ${JSON.stringify(filters)}`);
 
+    await this.setupAuthHeader();
+
     // If no API key is present, return empty or mock data depending on env
-    if (!this.configService.get('MAYA_MOBILE_API_KEY')) {
+    if (!this.apiKey) {
       this.logger.warn('No API key found for Maya Mobile. Returning mock data.');
       return this.getMockPackages(filters);
     }
@@ -49,6 +58,7 @@ export class MayaMobileAdapter extends BaseProviderAdapter {
 
   async getPackageDetails(packageId: string): Promise<Package> {
     try {
+      await this.setupAuthHeader();
       const response = await this.httpClient.get(`/plans/${packageId}`);
       return this.mapToPackage(response.data);
     } catch (error) {
@@ -61,6 +71,7 @@ export class MayaMobileAdapter extends BaseProviderAdapter {
 
   async createOrder(orderData: CreateOrderDto): Promise<Order> {
     try {
+      await this.setupAuthHeader();
       const payload = {
         plan_id: orderData.packageId,
         quantity: orderData.quantity || 1,
@@ -91,6 +102,7 @@ export class MayaMobileAdapter extends BaseProviderAdapter {
   }
 
   async getOrderStatus(orderId: string): Promise<OrderStatus> {
+    await this.setupAuthHeader();
     const response = await this.httpClient.get(`/orders/${orderId}`);
     const data = response.data;
 
@@ -114,6 +126,7 @@ export class MayaMobileAdapter extends BaseProviderAdapter {
   }
 
   async getESIMDetails(esimId: string): Promise<ESIMDetails> {
+    await this.setupAuthHeader();
     const response = await this.httpClient.get(`/esims/${esimId}`);
     return this.mapEsimDetails(response.data);
   }

@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { EncryptionUtil } from '../src/common/utils/encryption.util';
 
 const prisma = new PrismaClient();
 
@@ -35,7 +36,7 @@ async function main() {
       apiBaseUrl: 'https://sandbox-partners-api.airalo.com/v2',
       isActive: true,
       config: {
-        apiKey: process.env.AIRALO_API_KEY || 'test-key',
+        apiKey: EncryptionUtil.encrypt(process.env.AIRALO_API_KEY || 'test-key'),
         sandbox: true,
       },
     },
@@ -50,7 +51,7 @@ async function main() {
       apiBaseUrl: 'https://api.mayamobile.com/v1',
       isActive: true,
       config: {
-        apiKey: process.env.MAYA_MOBILE_API_KEY || 'test-key',
+        apiKey: EncryptionUtil.encrypt(process.env.MAYA_MOBILE_API_KEY || 'test-key'),
         sandbox: true,
       },
     },
@@ -65,7 +66,7 @@ async function main() {
       apiBaseUrl: 'https://api.esimcard.com/v1',
       isActive: true,
       config: {
-        apiKey: process.env.ESIMCARD_API_KEY || 'test-key',
+        apiKey: EncryptionUtil.encrypt(process.env.ESIMCARD_API_KEY || 'test-key'),
         sandbox: true,
       },
     },
@@ -80,7 +81,7 @@ async function main() {
       apiBaseUrl: 'https://api.esimgo.com/v2',
       isActive: true,
       config: {
-        apiKey: process.env.BREEZE_API_KEY || 'test-key',
+        apiKey: EncryptionUtil.encrypt(process.env.BREEZE_API_KEY || 'test-key'),
         sandbox: true,
       },
     },
@@ -95,7 +96,7 @@ async function main() {
       apiBaseUrl: 'https://api.holafly.com/v1',
       isActive: true,
       config: {
-        apiKey: process.env.HOLAFLY_API_KEY || 'test-key',
+        apiKey: EncryptionUtil.encrypt(process.env.HOLAFLY_API_KEY || 'test-key'),
         sandbox: true,
       },
     },
@@ -110,7 +111,7 @@ async function main() {
       apiBaseUrl: 'https://api.esim-go.com/v2.4',
       isActive: true,
       config: {
-        apiKey: process.env.ESIM_GO_API_KEY || 'test-key',
+        apiKey: EncryptionUtil.encrypt(process.env.ESIM_GO_API_KEY || 'test-key'),
         sandbox: true,
       },
     },

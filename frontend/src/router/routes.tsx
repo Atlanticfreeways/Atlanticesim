@@ -6,6 +6,10 @@
 import React from 'react';
 import { RouteObject } from 'react-router-dom';
 import { Dashboard } from '@/pages/Dashboard';
+import { PackagesPage } from '@/pages/PackagesPage';
+import { PackageDetailsPage } from '@/pages/PackageDetailsPage';
+import { ApiKeyPage } from '@/pages/ApiKeyPage';
+import { WebhookPage } from '@/pages/WebhookPage';
 import { ComingSoon } from '@/pages/ComingSoon';
 
 /**
@@ -22,23 +26,19 @@ export const routes: RouteObject[] = [
   },
   {
     path: '/packages',
-    element: (
-      <ComingSoon
-        featureName="Browse Packages"
-        description="Explore and compare eSIM packages from multiple providers"
-        icon="📦"
-      />
-    ),
+    element: <PackagesPage />,
   },
   {
     path: '/packages/:id',
-    element: (
-      <ComingSoon
-        featureName="Package Details"
-        description="View detailed information about this package"
-        icon="📋"
-      />
-    ),
+    element: <PackageDetailsPage />,
+  },
+  {
+    path: '/settings/api',
+    element: <ApiKeyPage />,
+  },
+  {
+    path: '/settings/webhooks',
+    element: <WebhookPage />,
   },
   {
     path: '/orders',

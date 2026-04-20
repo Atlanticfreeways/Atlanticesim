@@ -103,9 +103,24 @@ export const ESIMCard: React.FC<ESIMCardProps> = ({
 
         {/* Expiry Date */}
         <div className="flex justify-between items-center text-sm">
-          <span className="text-gray-600">Expires</span>
+          <span className="text-gray-600">Plan valid until</span>
           <span className="font-medium text-gray-900">{formatDate(esim.expiresAt)}</span>
         </div>
+
+        {/* AI Prediction */}
+        {esim.predictionExhaustionDate && (
+          <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 space-y-1">
+            <div className="flex items-center gap-2 text-blue-800 text-xs font-bold uppercase tracking-wider">
+              <span className="animate-pulse">✨</span> AI Prediction
+            </div>
+            <p className="text-xs text-blue-700">
+              Based on your usage velocity, we expect you'll run out of data on{' '}
+              <span className="font-bold underline">
+                {new Date(esim.predictionExhaustionDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </p>
+          </div>
+        )}
 
         {/* Expandable Details */}
         {isExpanded && (

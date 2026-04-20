@@ -13,29 +13,36 @@ import {
     ESIMDetails,
 } from '../../../common/interfaces/provider.interface';
 
+import { PrismaService } from '../../../config/prisma.service';
+
 @Injectable()
 export class EsimGoAdapter extends BaseProviderAdapter {
     constructor(
         private configService: ConfigService,
+        private prismaService: PrismaService,
         @Optional() httpClient?: AxiosInstance,
     ) {
         super(
-            'eSIMGo',
+            'esim-go',
             configService.get('ESIM_GO_BASE_URL') || 'https://api.esim-go.com/v2.4',
-            configService.get('eSIM_Go_API_KEY') || '',
+            '',
             httpClient,
+            prismaService
         );
-        this.setupAuthHeader();
     }
 
-    protected setupAuthHeader(): void {
-        // eSIM Go uses X-API-Key header
-        this.httpClient.defaults.headers.common['X-API-Key'] = this.apiKey;
+    protected async setupAuthHeader(): Promise<void> {
+        await super.setupAuthHeader();
+        if (this.apiKey) {
+            // eSIM Go uses X-API-Key header
+            this.httpClient.defaults.headers.common['X-API-Key'] = this.apiKey;
+            delete this.httpClient.defaults.headers.common['Authorization'];
+        }
     }
 
     @WithCircuitBreaker()
     async searchPackages(filters: PackageFilters): Promise<Package[]> {
-        this.setupAuthHeader();
+        await this.setupAuthHeader();
         try {
             const params: any = { perPage: 50 };
             if (filters.country) {
@@ -81,7 +88,7 @@ export class EsimGoAdapter extends BaseProviderAdapter {
 
     @WithCircuitBreaker()
     async createOrder(orderData: CreateOrderDto): Promise<Order> {
-        this.setupAuthHeader();
+        await this.setupAuthHeader();
         try {
             // 1. Apply Bundle (Order)
             const applyPayload = {
@@ -161,7 +168,7 @@ export class EsimGoAdapter extends BaseProviderAdapter {
 
     @WithCircuitBreaker()
     async getPackageDetails(packageId: string): Promise<Package> {
-        this.setupAuthHeader();
+        await this.setupAuthHeader();
         const response = await this.httpClient.get(`/catalogue/bundle/${packageId}`);
         return this.mapToPackage(response.data);
     }

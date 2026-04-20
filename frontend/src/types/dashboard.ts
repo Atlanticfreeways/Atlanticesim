@@ -25,6 +25,7 @@ export interface ESIM {
   expiresAt: string;
   provider: string;
   qrCode?: string;
+  predictionExhaustionDate?: string;
 }
 
 export interface Order {
@@ -43,12 +44,18 @@ export interface DashboardStats {
   totalSpent: number;
   totalDataUsed: number;
   currency: string;
+  walletBalance?: number;
 }
 
-export interface DashboardData {
   stats: DashboardStats;
   esims: ESIM[];
   recentOrders: Order[];
+  partnerProfile?: {
+    companyName?: string;
+    apiKey?: string;
+    webhookUrl?: string;
+    wholesaleMargin?: number;
+  };
 }
 
 export interface DashboardError {

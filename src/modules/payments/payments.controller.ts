@@ -1,35 +1,48 @@
-import { Controller, Post, Body, UseGuards, Request, Headers, RawBodyRequest, Req } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request, Headers, Param, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { PaymentsService } from './payments.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { CreatePaymentIntentDto } from './dto/create-payment-intent.dto';
+import { CreatePaymentSessionDto } from './dto/create-payment-session.dto';
+import { Throttle } from '@nestjs/throttler';
 
 @ApiTags('Payments')
 @Controller('payments')
+@Throttle({ default: { limit: 10, ttl: 60000 } }) // Max 10 requests per minute
 export class PaymentsController {
-  constructor(private paymentsService: PaymentsService) {}
+  constructor(private readonly paymentsService: PaymentsService) {}
 
-  @ApiOperation({ summary: 'Create payment intent' })
+  @ApiOperation({ summary: 'Create payment session/checkout URL' })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @Post('create-intent')
-  async createPaymentIntent(
+  @Post('create-session')
+  async createPaymentSession(
     @Request() req,
-    @Body() createPaymentIntentDto: CreatePaymentIntentDto,
+    @Body() dto: CreatePaymentSessionDto,
   ) {
-    return this.paymentsService.createPaymentIntent(
-      createPaymentIntentDto.orderId,
+    return this.paymentsService.createPaymentSession(
+      dto.orderId,
       req.user.userId,
+      dto.method,
     );
   }
 
-  @ApiOperation({ summary: 'Stripe webhook' })
-  @Post('webhook')
-  async handleWebhook(
-    @Headers('stripe-signature') signature: string,
-    @Req() req: RawBodyRequest<Request>,
+  @ApiOperation({ summary: 'Verify payment status' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('verify')
+  async verifyPayment(
+    @Body('orderId') orderId: string,
   ) {
-    return this.paymentsService.handleWebhook(signature, req.rawBody);
+    return this.paymentsService.verifyPayment(orderId);
+  }
+
+  @ApiOperation({ summary: 'Payment Gateway Webhook' })
+  @Post('webhook/:method')
+  async handleWebhook(
+    @Param('method') method: string,
+    @Body() payload: any,
+  ) {
+    return this.paymentsService.handleWebhook(method, payload);
   }
 
   @ApiOperation({ summary: 'Refund payment' })

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Package } from '../../types';
-import { Wifi, Phone, MessageSquare } from 'lucide-react';
+import { Wifi, Phone, MessageSquare, Diamond } from 'lucide-react';
 
 interface PackageCardProps {
   package: Package;
@@ -9,10 +9,16 @@ interface PackageCardProps {
 
 export const PackageCard: React.FC<PackageCardProps> = ({ package: pkg, onSelect }) => {
   return (
-    <div className="border rounded-lg p-4 hover:shadow-lg transition-shadow">
+    <div className={`relative border rounded-xl p-5 hover:shadow-xl transition-all duration-300 ${pkg.isBestValue ? 'border-amber-400 bg-amber-50/30' : 'bg-white'}`}>
+      {pkg.isBestValue && (
+        <div className="absolute -top-3 right-4 flex items-center gap-1 bg-gradient-to-r from-amber-400 to-orange-500 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg uppercase tracking-wider">
+          <Diamond className="w-3 h-3 fill-current" />
+          Best Value
+        </div>
+      )}
       <div className="flex justify-between items-start mb-2">
-        <h3 className="font-semibold text-lg">{pkg.name}</h3>
-        <span className="text-xs bg-gray-100 px-2 py-1 rounded">{pkg.providerName}</span>
+        <h3 className="font-bold text-lg text-gray-900">{pkg.name}</h3>
+        <span className="text-[10px] font-bold text-gray-400 border border-gray-200 px-2 py-0.5 rounded-full uppercase">{pkg.providerName}</span>
       </div>
       
       <p className="text-gray-600 text-sm mb-3">{pkg.description}</p>

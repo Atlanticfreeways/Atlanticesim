@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { CacheModule } from '@nestjs/cache-manager';
+import { BullModule } from '@nestjs/bull';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { ProvidersModule } from './modules/providers/providers.module';
@@ -10,6 +11,9 @@ import { EsimsModule } from './modules/esims/esims.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { QueuesModule } from './modules/queues/queues.module';
+import { PartnersModule } from './modules/partners/partners.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { PrismaModule } from './config/prisma.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
@@ -36,10 +40,33 @@ import { validationSchema } from './config/env.validation';
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => [{
-        ttl: config.get('RATE_LIMIT_WINDOW_MS') || 60000,
-        limit: config.get('RATE_LIMIT_MAX_REQUESTS') || 100,
-      }],
+      useFactory: (config: ConfigService) => [
+        {
+          name: 'default',
+          ttl: config.get('RATE_LIMIT_WINDOW_MS') || 60000,
+          limit: config.get('RATE_LIMIT_MAX_REQUESTS') || 100,
+        },
+        {
+          name: 'strict',
+          ttl: 60000,
+          limit: 10,
+        },
+        {
+          name: 'login',
+          ttl: 300000, // 5 mins
+          limit: 5,
+        }
+      ],
+    }),
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (config: ConfigService) => ({
+        redis: {
+          host: config.get('REDIS_HOST') || 'localhost',
+          port: config.get('REDIS_PORT') || 6379,
+        },
+      }),
     }),
     PrismaModule,
     AuthModule,
@@ -51,6 +78,9 @@ import { validationSchema } from './config/env.validation';
     PaymentsModule,
     AdminModule,
     NotificationsModule,
+    QueuesModule,
+    PartnersModule,
+    DashboardModule,
     HealthModule,
     MetricsModule,
   ],

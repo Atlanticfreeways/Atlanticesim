@@ -11,21 +11,28 @@ import {
   ESIMDetails,
 } from '../../../common/interfaces/provider.interface';
 
+import { PrismaService } from '../../../config/prisma.service';
+
 @Injectable()
 export class BreezeAdapter extends BaseProviderAdapter {
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    private prismaService: PrismaService,
+  ) {
     super(
-      'Breeze',
+      'breeze',
       configService.get('BREEZE_API_URL') || 'https://api.breeze.com/v1',
-      configService.get('BREEZE_API_KEY') || '',
+      '',
+      undefined,
+      prismaService
     );
   }
 
   async searchPackages(filters: PackageFilters): Promise<Package[]> {
     this.logger.log(`Searching packages with filters: ${JSON.stringify(filters)}`);
+    await this.setupAuthHeader();
 
-    // If no API key is present, return mock data
-    if (!this.configService.get('BREEZE_API_KEY')) {
+    if (!this.apiKey) {
       this.logger.warn('No API key found for Breeze. Returning mock data.');
       return this.getMockPackages(filters);
     }
@@ -45,6 +52,7 @@ export class BreezeAdapter extends BaseProviderAdapter {
 
   async getPackageDetails(packageId: string): Promise<Package> {
     try {
+      await this.setupAuthHeader();
       const response = await this.httpClient.get(`/bundles/${packageId}`);
       return this.mapToPackage(response.data);
     } catch (error) {
@@ -57,6 +65,7 @@ export class BreezeAdapter extends BaseProviderAdapter {
 
   async createOrder(orderData: CreateOrderDto): Promise<Order> {
     try {
+      await this.setupAuthHeader();
       const payload = {
         bundle_code: orderData.packageId,
         count: orderData.quantity || 1,
@@ -86,6 +95,7 @@ export class BreezeAdapter extends BaseProviderAdapter {
   }
 
   async getOrderStatus(orderId: string): Promise<OrderStatus> {
+    await this.setupAuthHeader();
     const response = await this.httpClient.get(`/purchases/${orderId}`);
     const data = response.data;
 

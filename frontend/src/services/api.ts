@@ -3,6 +3,7 @@ import { User, Package, Order, ESim } from '../types';
 
 const api = axios.create({
   baseURL: '/api/v1',
+  withCredentials: true, // Required for CSRF and Secure Session Cookies
 });
 
 api.interceptors.request.use((config) => {
@@ -51,6 +52,19 @@ export const esimsApi = {
 export const paymentsApi = {
   createIntent: (orderId: string, amount: number, currency: string) =>
     api.post('/payments/create-intent', { orderId, amount, currency }),
+  createSession: (orderId: string, method: 'crypto' | 'paystack') =>
+    api.post('/payments/create-session', { orderId, method }),
+};
+
+export const partnersApi = {
+  getWallet: () => api.get('/partners/wallet'),
+  topUpWallet: (amount: number) => api.post('/partners/wallet/topup', { amount }),
+  getProfile: () => api.get('/partners/profile'),
+  updateBranding: (logoUrl: string, primaryColor: string) => 
+    api.put('/partners/branding', { logoUrl, primaryColor }),
+  regenerateApiKey: () => api.post('/partners/keys/regenerate'),
+  updateWebhook: (url: string, secret: string, events: string[]) => 
+    api.put('/partners/webhooks', { url, secret, events }),
 };
 
 export const adminApi = {
