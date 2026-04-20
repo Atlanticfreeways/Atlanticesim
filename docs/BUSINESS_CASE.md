@@ -43,17 +43,24 @@ For Business Partners, Atlantic functions as a Clearing House:
 
 ---
 
-## 3. Quantitative Projections (User Scaling)
+## 3. Quantitative Projections (Net ROI)
 
-The following table projects the monthly revenue and gross profit based on an average consumption profile of 1 transaction (3GB package) per user per month.
+The following table projects the **Net Profit** after accounting for both the Cost of Goods Sold (Wholesale) and Operational Expenses (Transaction Fees + Infrastructure).
 
-| User Count | Total Investment (Wholesale) | Gross Revenue (Retail) | Monthly Gross Profit | Annual Projected Profit |
-| :--- | :--- | :--- | :--- | :--- |
-| **50 Users** | $375.00 | $600.00 | **$225.00** | $2,700.00 |
-| **100 Users** | $750.00 | $1,200.00 | **$450.00** | $5,400.00 |
-| **500 Users** | $3,750.00 | $6,000.00 | **$2,250.00** | $27,000.00 |
+### Monthly Financial Model
 
-*Assumptions: Standard $12 retail price / $7.50 wholesale cost. Projections exclude operational overhead and focus on gross margin logic.*
+| User Count | Gross Revenue ($12/ea) | Wholesale Cost ($7.50/ea) | Payment Fees (3.5%) | Fixed OpEx (Hosting/DB) | **Net Monthly Profit** |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **50 Users** | $600.00 | $375.00 | $21.00 | $50.00 | **$154.00** |
+| **100 Users** | $1,200.00 | $750.00 | $42.00 | $50.00 | **$358.00** |
+| **500 Users** | $6,000.00 | $3,750.00 | $210.00 | $80.00* | **$1,960.00** |
+
+*\*Fixed OpEx is projected to scale slightly at 500 users to accommodate higher database and logging throughput.*
+
+### Expense Breakdown Logic
+1.  **Payment Processing (3.5%)**: Covers transaction fees for Stripe, Paystack, or Crypto gateways.
+2.  **Fixed Infrastructure ($50-$80)**: Covers Render/AWS compute instances, managed PostgreSQL, and Redis cache for BullMQ.
+3.  **Support Margin**: At the 500-user tier, the increased margin allows for the integration of automated ticketing systems or decentralized customer support tools.
 
 ---
 
