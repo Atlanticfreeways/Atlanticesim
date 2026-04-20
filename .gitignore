@@ -35,14 +35,13 @@ coverage/
 # Prisma
 prisma/migrations/migration_lock.toml
 
-# Documentation (keep only essential files)
+# Documentation
 *.md
 !README.md
 !ROADMAP.md
-!WEEK_1_TASKS.md
-!DEVELOPER_SETUP.md
-!DEPLOYMENT_GUIDE.md
-!SECRETS_MANAGEMENT.md
+!GRADUATION_REPORT.md
+!docs/
+!docs/*.md
 
 # Credentials and sensitive files (NEVER commit these!)
 LOGIN_CREDENTIALS.md
