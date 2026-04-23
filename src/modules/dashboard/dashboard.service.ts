@@ -37,12 +37,13 @@ export class DashboardService {
     if (role === UserRole.BUSINESS_PARTNER) {
       const wallet = await this.walletService.getWallet(userId);
       const profile = await this.partnerProfileService.getProfile(userId);
+      const webhook = await this.prisma.webhookConfig.findUnique({ where: { userId } });
       
       extraData = {
         walletBalance: wallet.balance,
         partnerProfile: {
           companyName: profile.companyName,
-          webhookUrl: profile.webhookUrl,
+          webhookUrl: webhook?.url || null,
           wholesaleMargin: profile.wholesaleMargin,
         }
       };

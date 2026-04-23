@@ -12,6 +12,7 @@ import {
   ESIMDetails,
 } from '../../../common/interfaces/provider.interface';
 import { PackageClassifier } from '../../../common/utils/package-classifier.util';
+import { WithCircuitBreaker } from '../../../common/providers/circuit-breaker.decorator';
 
 @Injectable()
 export class EsimCardAdapter extends BaseProviderAdapter {
@@ -28,6 +29,7 @@ export class EsimCardAdapter extends BaseProviderAdapter {
     );
   }
 
+  @WithCircuitBreaker()
   async searchPackages(filters: PackageFilters): Promise<Package[]> {
     this.logger.log(`Searching packages with filters: ${JSON.stringify(filters)}`);
     await this.setupAuthHeader();
@@ -49,6 +51,7 @@ export class EsimCardAdapter extends BaseProviderAdapter {
     }
   }
 
+  @WithCircuitBreaker()
   async getPackageDetails(packageId: string): Promise<Package> {
     await this.setupAuthHeader();
     try {
@@ -59,6 +62,7 @@ export class EsimCardAdapter extends BaseProviderAdapter {
     }
   }
 
+  @WithCircuitBreaker()
   async createOrder(orderData: CreateOrderDto): Promise<Order> {
     await this.setupAuthHeader();
     try {

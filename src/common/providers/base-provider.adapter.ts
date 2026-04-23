@@ -12,8 +12,8 @@ import {
     ESIMDetails,
 } from '../interfaces/provider.interface';
 
-import { PrismaService } from '../../../config/prisma.service';
-import { EncryptionUtil } from '../../utils/encryption.util';
+import { PrismaService } from '../../config/prisma.service';
+import { EncryptionUtil } from '../utils/encryption.util';
 
 export abstract class BaseProviderAdapter implements IProviderAdapter {
     protected readonly logger: Logger;

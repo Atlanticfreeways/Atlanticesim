@@ -1,25 +1,34 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
-import * as timeout from 'connect-timeout';
 import { loggerConfig } from './config/logger.config';
 import helmet from 'helmet';
 import * as compression from 'compression';
 import * as cookieParser from 'cookie-parser';
-import * as csurf from 'csurf';
+import { join } from 'path';
+import { existsSync } from 'fs';
+import * as dotenv from 'dotenv';
+
+// Force .env to override system env vars BEFORE any modules load
+const envConfig = dotenv.config({ path: '.env' });
+if (envConfig.parsed) {
+  Object.assign(process.env, envConfig.parsed);
+}
 
 async function bootstrap() {
-  console.log('ENV DEBUG: Keys available:', Object.keys(process.env).sort());
-
-  const app = await NestFactory.create(AppModule, {
+  const logger = new Logger('Bootstrap');
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: loggerConfig,
   });
 
   app.use(compression());
 
-  app.setGlobalPrefix('api/v1');
+  app.setGlobalPrefix('api/v1', {
+    exclude: ['/'],
+  });
 
   // Security Headers
   app.use(helmet({
@@ -38,24 +47,7 @@ async function bootstrap() {
     },
   }));
 
-  // Setup Cookie Parser
   app.use(cookieParser());
-
-  // Setup Cross-Site Request Forgery Protection (Wait until users authenticate)
-  // We use Cookie for CSRF tokens without breaking the API state
-  app.use(csurf({
-    cookie: {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-    }
-  }));
-
-  // Request Timeout Protection (30s)
-  app.use(timeout('30s'));
-  app.use((req, res, next) => {
-    if (!req.timedout) next();
-  });
 
   app.useGlobalPipes(new ValidationPipe({
     transform: true,
@@ -67,7 +59,7 @@ async function bootstrap() {
   }));
   app.useGlobalFilters(new GlobalExceptionFilter());
 
-  // Configure CORS with origin restrictions
+  // CORS — only needed if frontend is served separately (dev mode)
   app.enableCors({
     origin: process.env.ALLOWED_ORIGINS?.split(',') || 'http://localhost:3001',
     credentials: true,
@@ -75,16 +67,39 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
+  // Swagger API docs
   const config = new DocumentBuilder()
     .setTitle('Atlantic eSIM Platform')
     .setDescription('Multi-provider eSIM aggregation platform API')
     .setVersion('1.0')
     .addBearerAuth()
     .build();
-
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  await app.listen(process.env.PORT || 3000);
+  // Serve frontend static build from single port (production)
+  const frontendPath = join(__dirname, '..', 'frontend', 'dist');
+  if (existsSync(frontendPath)) {
+    app.useStaticAssets(frontendPath);
+    app.setBaseViewsDir(frontendPath);
+    logger.log(`Serving frontend from ${frontendPath}`);
+
+    // SPA fallback — serve index.html for non-API routes
+    const { Router } = await import('express');
+    const spaRouter = Router();
+    spaRouter.get(/^\/(?!api\/).*/, (_req, res) => {
+      res.sendFile(join(frontendPath, 'index.html'));
+    });
+    app.use(spaRouter);
+  } else {
+    logger.warn('Frontend build not found — API-only mode');
+  }
+
+  // Graceful shutdown
+  app.enableShutdownHooks();
+
+  const port = process.env.PORT || 3000;
+  await app.listen(port);
+  logger.log(`Atlantic eSIM running on port ${port}`);
 }
 bootstrap();

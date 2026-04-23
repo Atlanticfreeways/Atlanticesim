@@ -46,4 +46,34 @@ export class AdminController {
   async getUserAnalytics() {
     return this.adminService.getUserAnalytics();
   }
+
+  @ApiOperation({ summary: 'Get current pricing settings' })
+  @Get('pricing')
+  async getPricing() {
+    return this.adminService.getPricingSettings();
+  }
+
+  @ApiOperation({ summary: 'Update global pricing margins' })
+  @Put('pricing/global')
+  async updateGlobalPricing(@Body() data: any) {
+    return this.adminService.updateGlobalPricing(data);
+  }
+
+  @ApiOperation({ summary: 'Update provider-specific pricing' })
+  @Put('pricing/providers/:id')
+  async updateProviderPricing(
+    @Param('id') id: string,
+    @Body() data: any,
+  ) {
+    return this.adminService.updateProviderPricing(id, data);
+  }
+
+  @ApiOperation({ summary: 'Set manual package price override' })
+  @Put('pricing/packages/:id')
+  async setPackageOverride(
+    @Param('id') id: string,
+    @Body('retailPrice') retailPrice: number,
+  ) {
+    return this.adminService.setPackageOverride(id, retailPrice);
+  }
 }

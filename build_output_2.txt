@@ -1,0 +1,79 @@
+
+> atlantic-esim-platform@1.0.0 build
+> nest build
+
+[96msrc/modules/payments/payments.service.error.spec.ts[0m:[93m82[0m:[93m17[0m - [91merror[0m[90m TS2339: [0mProperty 'createPaymentIntent' does not exist on type 'PaymentsService'.
+
+[7m82[0m         service.createPaymentIntent('nonexistent', 'user-1'),
+[7m  [0m [91m                ~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/payments/payments.service.error.spec.ts[0m:[93m90[0m:[93m17[0m - [91merror[0m[90m TS2339: [0mProperty 'createPaymentIntent' does not exist on type 'PaymentsService'.
+
+[7m90[0m         service.createPaymentIntent('order-1', 'different-user'),
+[7m  [0m [91m                ~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/payments/payments.service.error.spec.ts[0m:[93m101[0m:[93m17[0m - [91merror[0m[90m TS2339: [0mProperty 'createPaymentIntent' does not exist on type 'PaymentsService'.
+
+[7m101[0m         service.createPaymentIntent('order-1', 'user-1'),
+[7m   [0m [91m                ~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/payments/payments.service.error.spec.ts[0m:[93m112[0m:[93m17[0m - [91merror[0m[90m TS2339: [0mProperty 'createPaymentIntent' does not exist on type 'PaymentsService'.
+
+[7m112[0m         service.createPaymentIntent('order-1', 'user-1'),
+[7m   [0m [91m                ~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/payments/payments.service.error.spec.ts[0m:[93m123[0m:[93m17[0m - [91merror[0m[90m TS2339: [0mProperty 'createPaymentIntent' does not exist on type 'PaymentsService'.
+
+[7m123[0m         service.createPaymentIntent('order-1', 'user-1'),
+[7m   [0m [91m                ~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/payments/payments.service.error.spec.ts[0m:[93m138[0m:[93m17[0m - [91merror[0m[90m TS2339: [0mProperty 'createPaymentIntent' does not exist on type 'PaymentsService'.
+
+[7m138[0m         service.createPaymentIntent('order-1', 'user-1'),
+[7m   [0m [91m                ~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/payments/payments.service.error.spec.ts[0m:[93m153[0m:[93m17[0m - [91merror[0m[90m TS2339: [0mProperty 'createPaymentIntent' does not exist on type 'PaymentsService'.
+
+[7m153[0m         service.createPaymentIntent('order-1', 'user-1'),
+[7m   [0m [91m                ~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/payments/payments.service.error.spec.ts[0m:[93m293[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'createPaymentIntent' does not exist on type 'PaymentsService'.
+
+[7m293[0m         await service.createPaymentIntent('order-1', 'user-1');
+[7m   [0m [91m                      ~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/payments/payments.service.error.spec.ts[0m:[93m306[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'createPaymentIntent' does not exist on type 'PaymentsService'.
+
+[7m306[0m         await service.createPaymentIntent('order-1', 'user-1');
+[7m   [0m [91m                      ~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/payments/payments.service.error.spec.ts[0m:[93m325[0m:[93m17[0m - [91merror[0m[90m TS2339: [0mProperty 'createPaymentIntent' does not exist on type 'PaymentsService'.
+
+[7m325[0m         service.createPaymentIntent('order-1', 'user-1'),
+[7m   [0m [91m                ~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/payments/payments.service.error.spec.ts[0m:[93m336[0m:[93m36[0m - [91merror[0m[90m TS2339: [0mProperty 'createPaymentIntent' does not exist on type 'PaymentsService'.
+
+[7m336[0m       const result = await service.createPaymentIntent('order-1', 'user-1');
+[7m   [0m [91m                                   ~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/payments/payments.service.spec.ts[0m:[93m112[0m:[93m36[0m - [91merror[0m[90m TS2339: [0mProperty 'createPaymentIntent' does not exist on type 'PaymentsService'.
+
+[7m112[0m       const result = await service.createPaymentIntent(orderId, userId);
+[7m   [0m [91m                                   ~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/payments/payments.service.spec.ts[0m:[93m138[0m:[93m21[0m - [91merror[0m[90m TS2339: [0mProperty 'createPaymentIntent' does not exist on type 'PaymentsService'.
+
+[7m138[0m       await service.createPaymentIntent(orderId, userId);
+[7m   [0m [91m                    ~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/payments/payments.service.spec.ts[0m:[93m156[0m:[93m21[0m - [91merror[0m[90m TS2339: [0mProperty 'createPaymentIntent' does not exist on type 'PaymentsService'.
+
+[7m156[0m       await service.createPaymentIntent(orderId, userId);
+[7m   [0m [91m                    ~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/payments/payments.service.spec.ts[0m:[93m172[0m:[93m17[0m - [91merror[0m[90m TS2339: [0mProperty 'createPaymentIntent' does not exist on type 'PaymentsService'.
+
+[7m172[0m         service.createPaymentIntent(orderId, userId),
+[7m   [0m [91m                ~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/payments/payments.service.spec.ts[0m:[93m185[0m:[93m21[0m - [91merror[0m[90m TS2339: [0mProperty 'createPaymentIntent' does not exist on type 'PaymentsService'.
+
+[7m185[0m       await service.createPaymentIntent(orderId, userId);
+[7m   [0m [91m                    ~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/payments/payments.service.spec.ts[0m:[93m340[0m:[93m21[0m - [91merror[0m[90m TS2339: [0mProperty 'refundId' does not exist on type '{ success: boolean; }'.
+
+[7m340[0m       expect(result.refundId).toBe('ref_123');
+[7m   [0m [91m                    ~~~~~~~~[0m
+[96msrc/modules/payments/payments.service.spec.ts[0m:[93m409[0m:[93m22[0m - [91merror[0m[90m TS2339: [0mProperty 'createPaymentIntent' does not exist on type 'PaymentsService'.
+
+[7m409[0m       expect(service.createPaymentIntent).toBeDefined();
+[7m   [0m [91m                     ~~~~~~~~~~~~~~~~~~~[0m
+
+Found 18 error(s).
+

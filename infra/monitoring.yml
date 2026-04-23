@@ -1,0 +1,234 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Atlantic eSIM Monitoring — Dashboards & Alerts
+
+Parameters:
+  Environment:
+    Type: String
+    Default: production
+  AlarmEmail:
+    Type: String
+    Description: Email for alert notifications
+  ECSClusterName:
+    Type: String
+    Default: atlantic-production
+  ECSServiceName:
+    Type: String
+    Default: atlantic-app
+
+Resources:
+  # SNS Topic for alerts
+  AlertTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub atlantic-${Environment}-alerts
+
+  AlertSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref AlertTopic
+      Protocol: email
+      Endpoint: !Ref AlarmEmail
+
+  # High Error Rate Alarm (>1% 5xx in 5 min)
+  HighErrorRateAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub atlantic-${Environment}-high-error-rate
+      AlarmDescription: "API error rate exceeds 1% over 5 minutes"
+      Namespace: AWS/ApplicationELB
+      MetricName: HTTPCode_Target_5XX_Count
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 50
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions: [!Ref AlertTopic]
+
+  # High CPU Alarm (>85% for 5 min)
+  HighCPUAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub atlantic-${Environment}-high-cpu
+      AlarmDescription: "ECS CPU utilization exceeds 85%"
+      Namespace: AWS/ECS
+      MetricName: CPUUtilization
+      Dimensions:
+        - Name: ClusterName
+          Value: !Ref ECSClusterName
+        - Name: ServiceName
+          Value: !Ref ECSServiceName
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 85
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions: [!Ref AlertTopic]
+
+  # High Memory Alarm (>85% for 5 min)
+  HighMemoryAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub atlantic-${Environment}-high-memory
+      AlarmDescription: "ECS memory utilization exceeds 85%"
+      Namespace: AWS/ECS
+      MetricName: MemoryUtilization
+      Dimensions:
+        - Name: ClusterName
+          Value: !Ref ECSClusterName
+        - Name: ServiceName
+          Value: !Ref ECSServiceName
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 85
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions: [!Ref AlertTopic]
+
+  # RDS High CPU
+  RDSHighCPUAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub atlantic-${Environment}-rds-high-cpu
+      AlarmDescription: "RDS CPU exceeds 80%"
+      Namespace: AWS/RDS
+      MetricName: CPUUtilization
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Sub atlantic-${Environment}
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 80
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions: [!Ref AlertTopic]
+
+  # RDS Low Free Storage
+  RDSLowStorageAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub atlantic-${Environment}-rds-low-storage
+      AlarmDescription: "RDS free storage below 5GB"
+      Namespace: AWS/RDS
+      MetricName: FreeStorageSpace
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Sub atlantic-${Environment}
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 5368709120  # 5GB in bytes
+      ComparisonOperator: LessThanThreshold
+      AlarmActions: [!Ref AlertTopic]
+
+  # Redis High CPU
+  RedisHighCPUAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub atlantic-${Environment}-redis-high-cpu
+      AlarmDescription: "Redis CPU exceeds 75%"
+      Namespace: AWS/ElastiCache
+      MetricName: EngineCPUUtilization
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 75
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions: [!Ref AlertTopic]
+
+  # Monitoring Dashboard
+  Dashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: !Sub atlantic-${Environment}
+      DashboardBody: !Sub |
+        {
+          "widgets": [
+            {
+              "type": "metric",
+              "x": 0, "y": 0, "width": 12, "height": 6,
+              "properties": {
+                "title": "API Response Times (ALB)",
+                "metrics": [
+                  ["AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", "atlantic-${Environment}", {"stat": "p50", "label": "p50"}],
+                  ["...", {"stat": "p95", "label": "p95"}],
+                  ["...", {"stat": "p99", "label": "p99"}]
+                ],
+                "period": 60,
+                "view": "timeSeries"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12, "y": 0, "width": 12, "height": 6,
+              "properties": {
+                "title": "Error Rates",
+                "metrics": [
+                  ["AWS/ApplicationELB", "HTTPCode_Target_5XX_Count", "LoadBalancer", "atlantic-${Environment}", {"stat": "Sum", "label": "5xx"}],
+                  ["AWS/ApplicationELB", "HTTPCode_Target_4XX_Count", "LoadBalancer", "atlantic-${Environment}", {"stat": "Sum", "label": "4xx"}],
+                  ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", "atlantic-${Environment}", {"stat": "Sum", "label": "Total"}]
+                ],
+                "period": 60,
+                "view": "timeSeries"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0, "y": 6, "width": 12, "height": 6,
+              "properties": {
+                "title": "ECS CPU & Memory",
+                "metrics": [
+                  ["AWS/ECS", "CPUUtilization", "ClusterName", "${ECSClusterName}", "ServiceName", "${ECSServiceName}", {"label": "CPU %"}],
+                  ["AWS/ECS", "MemoryUtilization", "ClusterName", "${ECSClusterName}", "ServiceName", "${ECSServiceName}", {"label": "Memory %"}]
+                ],
+                "period": 60,
+                "view": "timeSeries"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12, "y": 6, "width": 12, "height": 6,
+              "properties": {
+                "title": "RDS Performance",
+                "metrics": [
+                  ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "atlantic-${Environment}", {"label": "CPU %"}],
+                  ["AWS/RDS", "DatabaseConnections", "DBInstanceIdentifier", "atlantic-${Environment}", {"label": "Connections"}],
+                  ["AWS/RDS", "ReadLatency", "DBInstanceIdentifier", "atlantic-${Environment}", {"label": "Read Latency"}]
+                ],
+                "period": 60,
+                "view": "timeSeries"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0, "y": 12, "width": 12, "height": 6,
+              "properties": {
+                "title": "Redis Performance",
+                "metrics": [
+                  ["AWS/ElastiCache", "CacheHitRate", {"label": "Cache Hit Rate %"}],
+                  ["AWS/ElastiCache", "EngineCPUUtilization", {"label": "CPU %"}],
+                  ["AWS/ElastiCache", "CurrConnections", {"label": "Connections"}]
+                ],
+                "period": 60,
+                "view": "timeSeries"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12, "y": 12, "width": 12, "height": 6,
+              "properties": {
+                "title": "ECS Task Count",
+                "metrics": [
+                  ["AWS/ECS", "RunningTaskCount", "ClusterName", "${ECSClusterName}", "ServiceName", "${ECSServiceName}", {"label": "Running Tasks"}]
+                ],
+                "period": 60,
+                "view": "timeSeries"
+              }
+            }
+          ]
+        }
+
+Outputs:
+  AlertTopicArn:
+    Value: !Ref AlertTopic
+  DashboardURL:
+    Value: !Sub "https://${AWS::Region}.console.aws.amazon.com/cloudwatch/home?region=${AWS::Region}#dashboards:name=atlantic-${Environment}"

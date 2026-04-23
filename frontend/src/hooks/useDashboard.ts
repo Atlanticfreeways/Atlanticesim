@@ -4,7 +4,7 @@
  * Uses React Query for caching and synchronization
  */
 
-import { useQuery, UseQueryResult } from '@tanstack/react-query';
+import { useQuery, UseQueryResult } from 'react-query';
 import { dashboardService } from '@/services/dashboard.service';
 import { DashboardData, DashboardError } from '@/types/dashboard';
 

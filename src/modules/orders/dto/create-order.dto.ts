@@ -6,9 +6,10 @@ export class CreateOrderDto {
   @IsString()
   packageId: string;
 
-  @ApiProperty()
+  @ApiProperty({ required: false, description: 'Optional — auto-resolved via smart routing if omitted' })
+  @IsOptional()
   @IsString()
-  providerId: string;
+  providerId?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()

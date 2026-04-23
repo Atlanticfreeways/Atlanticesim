@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
 import { ActivationProcessor } from './processors/activation.processor';
 import { ProvidersModule } from '../providers/providers.module';
+import { PartnersModule } from '../partners/partners.module';
 
 @Module({
   imports: [
@@ -13,7 +14,8 @@ import { ProvidersModule } from '../providers/providers.module';
         name: 'notifications',
       }
     ),
-    ProvidersModule, // To access the adapters for async activation
+    ProvidersModule,
+    PartnersModule,
   ],
   providers: [ActivationProcessor],
   exports: [BullModule],

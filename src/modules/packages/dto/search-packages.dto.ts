@@ -1,27 +1,40 @@
-import { IsOptional, IsString, IsNumber, IsBoolean, Min, Max, Matches } from 'class-validator';
+import { IsOptional, IsString, IsNumber, IsBoolean, IsEnum, Min } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class SearchPackagesDto {
-    @ApiPropertyOptional({ description: 'Comma-separated list of country codes (2 letters)' })
+    @ApiPropertyOptional({ description: 'Comma-separated country codes' })
     @IsOptional()
     @IsString()
-    // Validate that it's a comma-separated list of 2-letter codes or a single code
-    // Regex: ^[A-Z]{2}(,[A-Z]{2})*$
-    // However, often users send lowercase. Transformation handles case? No, we should probably allow lower case and transform.
-    // Let's rely on transform: true globally? Not sure if it lowercases strings.
-    // Let's just validate pattern roughly or handle transformation in controller if needed.
-    // Simpler: Just IsString for now, complicate regex later if needed.
     countries?: string;
 
-    @ApiPropertyOptional({ description: 'Minimum data amount in MB' })
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    region?: string;
+
+    @ApiPropertyOptional()
     @IsOptional()
     @Type(() => Number)
     @IsNumber()
     @Min(0)
     minData?: number;
 
-    @ApiPropertyOptional({ description: 'Maximum price in USD' })
+    @ApiPropertyOptional()
+    @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    @Min(0)
+    maxData?: number;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    @Min(0)
+    minPrice?: number;
+
+    @ApiPropertyOptional()
     @IsOptional()
     @Type(() => Number)
     @IsNumber()
@@ -30,7 +43,54 @@ export class SearchPackagesDto {
 
     @ApiPropertyOptional()
     @IsOptional()
+    @IsString()
+    packageType?: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    scopeType?: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @Transform(({ value }) => value === 'true' || value === true)
+    @IsBoolean()
+    isUnlimited?: boolean;
+
+    @ApiPropertyOptional()
+    @IsOptional()
     @Transform(({ value }) => value === 'true' || value === true)
     @IsBoolean()
     hasVoice?: boolean;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @Transform(({ value }) => value === 'true' || value === true)
+    @IsBoolean()
+    hasSms?: boolean;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    duration?: number;
+
+    @ApiPropertyOptional({ enum: ['price', 'data', 'duration'] })
+    @IsOptional()
+    @IsString()
+    sortBy?: 'price' | 'data' | 'duration';
+
+    @ApiPropertyOptional({ default: 1 })
+    @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    @Min(1)
+    page?: number;
+
+    @ApiPropertyOptional({ default: 50 })
+    @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    @Min(1)
+    limit?: number;
 }

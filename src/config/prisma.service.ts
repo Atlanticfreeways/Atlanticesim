@@ -1,14 +1,14 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaClient } from '@prisma/client';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit {
   private readonly logger = new Logger(PrismaService.name);
 
-  constructor() {
-    super({
-      log: ['query', 'info', 'warn', 'error'],
-    });
+  constructor(private readonly config: ConfigService) {
+    const url = config.get<string>('DATABASE_URL');
+    super({ datasources: { db: { url } }, log: ['warn', 'error'] });
   }
 
   async onModuleInit() {
@@ -17,26 +17,21 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
 
     while (retries < maxRetries) {
       try {
-        this.logger.log('Attempting to connect to database...');
-        this.logger.log(`DATABASE_URL: ${process.env.DATABASE_URL?.replace(/password=[^@]+/, 'password=***')}`);
-        
+        this.logger.log('Connecting to database...');
         await this.$connect();
-        
-        this.logger.log('✅ Successfully connected to database');
+        this.logger.log('✅ Database connected');
         return;
       } catch (error) {
         retries++;
-        this.logger.error(`❌ Database connection failed (attempt ${retries}/${maxRetries})`);
-        this.logger.error(`Error: ${error.message}`);
-        
+        this.logger.error(`❌ Connection failed (${retries}/${maxRetries}): ${error.message}`);
+
         if (retries === maxRetries) {
-          this.logger.error('❌ Max retries reached. Database connection failed.');
-          throw new Error(`Failed to connect to database after ${maxRetries} attempts: ${error.message}`);
+          throw new Error(`Database unreachable after ${maxRetries} attempts: ${error.message}`);
         }
-        
-        const waitTime = Math.pow(2, retries) * 1000; // Exponential backoff
-        this.logger.warn(`⏳ Retrying in ${waitTime}ms...`);
-        await new Promise(resolve => setTimeout(resolve, waitTime));
+
+        const wait = Math.pow(2, retries) * 1000;
+        this.logger.warn(`⏳ Retrying in ${wait}ms...`);
+        await new Promise(resolve => setTimeout(resolve, wait));
       }
     }
   }

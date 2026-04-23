@@ -1,4 +1,26 @@
 services:
+  # Frontend React App (Vite)
+  - type: web
+    name: atlantic-esim-frontend
+    env: docker
+    plan: free # Change to starter/pro for production
+    region: frankfurt
+    dockerfile: ./frontend/Dockerfile
+    healthCheckPath: /index.html
+    envVars:
+      - key: VITE_API_URL
+        value: https://atlantic-esim-api.onrender.com/api/v1
+      - key: VITE_STRIPE_KEY
+        sync: false
+      - key: VITE_APP_NAME
+        value: Atlantic eSIM
+      - key: VITE_APP_VERSION
+        value: 1.0.0
+      - key: VITE_ENABLE_ANALYTICS
+        value: "true"
+      - key: VITE_ENABLE_NOTIFICATIONS
+        value: "true"
+
   # Main Web Service (NestJS API)
   - type: web
     name: atlantic-esim-api
@@ -21,6 +43,8 @@ services:
         generateValue: true
       - key: ENCRYPTION_KEY
         generateValue: true
+      - key: FRONTEND_URL
+        value: https://atlantic-esim-frontend.onrender.com
       - key: AIRALO_CLIENT_ID
         sync: false
       - key: AIRALO_CLIENT_SECRET

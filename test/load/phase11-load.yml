@@ -1,0 +1,124 @@
+config:
+  target: "http://localhost:3000/api/v1"
+  phases:
+    # Phase 1: Warm-up
+    - duration: 30
+      arrivalRate: 10
+      name: "Warm-up"
+    # Phase 2: 1x expected load (baseline)
+    - duration: 60
+      arrivalRate: 50
+      name: "1x baseline (50 req/s)"
+    # Phase 3: 2x expected load
+    - duration: 60
+      arrivalRate: 100
+      name: "2x load (100 req/s)"
+    # Phase 4: 5x spike
+    - duration: 30
+      arrivalRate: 250
+      name: "5x spike (250 req/s)"
+    # Phase 5: Cool-down
+    - duration: 30
+      arrivalRate: 10
+      name: "Cool-down"
+
+  defaults:
+    headers:
+      Content-Type: "application/json"
+
+  ensure:
+    p95: 500
+    maxErrorRate: 1
+
+  plugins:
+    expect: {}
+
+  environments:
+    staging:
+      target: "https://staging.atlanticesim.com/api/v1"
+      phases:
+        - duration: 120
+          arrivalRate: 50
+          name: "Staging sustained"
+
+scenarios:
+  # --- Package Search (target: 1000 req/min = ~17 req/s) ---
+  - name: "Package search — country filter"
+    weight: 40
+    flow:
+      - get:
+          url: "/packages?countries=US"
+          expect:
+            - statusCode: 200
+      - think: 1
+
+  - name: "Package search — classification filters"
+    weight: 15
+    flow:
+      - get:
+          url: "/packages?packageType=DATA_ONLY&scopeType=LOCAL&sortBy=price&page=1&limit=20"
+          expect:
+            - statusCode: 200
+      - think: 1
+
+  - name: "Package search — price range"
+    weight: 10
+    flow:
+      - get:
+          url: "/packages?minPrice=5&maxPrice=30&isUnlimited=false"
+          expect:
+            - statusCode: 200
+      - think: 1
+
+  # --- Order Creation (target: 500 req/min = ~8 req/s) ---
+  - name: "Order creation — with providerId"
+    weight: 10
+    flow:
+      - post:
+          url: "/orders"
+          json:
+            packageId: "maya-us-3gb"
+            providerId: "maya-mobile"
+            paymentMethod: "card"
+          expect:
+            - statusCode:
+                - 201
+                - 404
+      - think: 2
+
+  - name: "Order creation — auto-routing (no providerId)"
+    weight: 10
+    flow:
+      - post:
+          url: "/orders"
+          json:
+            packageId: "maya-us-5gb"
+            paymentMethod: "card"
+          expect:
+            - statusCode:
+                - 201
+                - 404
+      - think: 2
+
+  # --- Health & Infrastructure ---
+  - name: "Health check"
+    weight: 10
+    flow:
+      - get:
+          url: "/health"
+          expect:
+            - statusCode: 200
+
+  # --- Cache performance ---
+  - name: "Repeated search (cache hit)"
+    weight: 5
+    flow:
+      - get:
+          url: "/packages?countries=GB"
+          expect:
+            - statusCode: 200
+      - get:
+          url: "/packages?countries=GB"
+          expect:
+            - statusCode: 200
+      - think: 1

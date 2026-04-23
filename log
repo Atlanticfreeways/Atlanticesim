@@ -1,0 +1,295 @@
+how will package/scope be implemented and queried to providers, brief me of a walkthrough and suggest roadmap?
+
+
+Context
+Good question — let me trace the exact data flow from provider API response → classification → storage → query, using real examples from your adapters.
+
+The Core Problem
+Each provider returns packages in completely different shapes. None of them use your PackageType or ScopeType enums. The classification has to be inferred from raw fields.
+
+Here's what each provider actually gives you today:
+
+1 directory listed
+providers
+1 file read
+esim_go_schema_v2_4.yaml
+Now I have the real eSIM Go API schema. This is critical — it shows exactly what fields are available. Let me trace the full walkthrough.
+
+End-to-End Walkthrough: How PackageType & ScopeType Actually Work
+Step 1: What Providers Actually Return (Raw Data)
+No provider returns PackageType or ScopeType. You have to infer them. Here's what each provider gives you:
+
+eSIM Go (from the actual schema I just read):
+
+// GET /catalogue response
+{
+  "name": "esim_5GB_30D_EU_V3",
+  "description": "eSIM, 5GB, 30 Days, Europe, V3",
+  "countries": [
+    { "name": "France", "region": "Europe", "iso": "FR" },
+    { "name": "Germany", "region": "Europe", "iso": "DE" }
+  ],
+  "dataAmount": 5000,        // MB
+  "duration": 30,
+  "unlimited": false,
+  "speed": ["4G", "5G"],
+  "allowances": [             // THIS IS THE KEY FIELD
+    { "type": "DATA", "amount": 5000, "unit": "MB", "unlimited": false },
+    { "type": "SMS", "amount": 50, "unit": "SMS", "unlimited": false },
+    { "type": "VOICE", "amount": 100, "unit": "MINS", "unlimited": false }
+  ]
+}
+
+Copy
+json
+Airalo (from adapter code + typical API shape):
+
+// GET /packages response
+{
+  "id": 12345,
+  "slug": "turkey",
+  "type": "sim",              // or "unlimited"
+  "data_amount": 5,
+  "data_unit": "GB",
+  "validity": 30,
+  "price": 8.50,
+  "operator": {
+    "title": "Turkcell",
+    "countries": [{ "slug": "turkey" }]
+  }
+}
+
+Copy
+json
+Airalo is data-only — no voice/SMS fields at all.
+
+Maya Mobile / Breeze / eSIMCard / Holafly — similar patterns, varying field names, mostly data-focused with occasional voice/SMS fields.
+
+Step 2: The Classifier (Where the Magic Happens)
+This is the new utility that sits between raw provider data and your internal model:
+
+Provider API Response
+        │
+        ▼
+┌─────────────────────────┐
+│  package-classifier.ts  │  ← Shared logic, NOT per-adapter
+│                         │
+│  Input:                 │
+│    hasData: boolean     │
+│    hasVoice: boolean    │
+│    hasSms: boolean      │
+│    isUnlimited: boolean │
+│    countries: string[]  │
+│                         │
+│  Output:                │
+│    packageType: enum    │
+│    scopeType: enum      │
+└─────────────────────────┘
+        │
+        ▼
+  Atlantic Package model
+
+Copy
+PackageType classification logic:
+
+hasData  hasVoice  hasSms  isUnlimited  →  PackageType
+──────────────────────────────────────────────────────
+  ✓        ✗         ✗        any       →  DATA_ONLY
+  ✗        ✓         ✗        any       →  VOICE_ONLY
+  ✗        ✗         ✓        any       →  TEXT_ONLY
+  ✓        ✗         ✓        any       →  DATA_WITH_TEXT
+  ✓        ✓         ✗        any       →  DATA_WITH_CALL
+  ✗        ✓         ✓        any       →  TEXT_WITH_CALL
+  ✓        ✓         ✓        ✓         →  DATA_WITH_ALL_UNLIMITED
+  ✓        ✓         ✓        ✗         →  ALL_INCLUSIVE
+
+Copy
+ScopeType classification logic:
+
+countries[]  →  map each to region via country-regions.ts  →  count unique regions
+
+1 country                          →  LOCAL
+2-15 countries, 1 region           →  REGIONAL
+2-15 countries, 2+ regions         →  MULTI_COUNTRY
+16+ countries                      →  GLOBAL
+
+Copy
+Step 3: How Each Adapter Extracts the Signals
+This is where it gets provider-specific. Each adapter must extract hasData, hasVoice, hasSms, isUnlimited, and countries[] from its raw response:
+
+eSIM Go — richest data, has allowances array:
+
+// In esim-go.adapter.ts mapToPackage()
+const hasData = bundle.allowances?.some(a => a.type === 'DATA') ?? bundle.dataAmount > 0;
+const hasVoice = bundle.allowances?.some(a => a.type === 'VOICE') ?? false;
+const hasSms = bundle.allowances?.some(a => a.type === 'SMS') ?? false;
+const isUnlimited = bundle.unlimited === true;
+const countries = bundle.countries?.map(c => c.iso) ?? [];
+
+Copy
+typescript
+Airalo — data-only provider, no allowances:
+
+// In airalo.adapter.ts mapToPackage()
+const hasData = true;  // Airalo only sells data
+const hasVoice = false;
+const hasSms = false;
+const isUnlimited = apiPkg.type === 'unlimited';
+const countries = apiPkg.operator?.countries?.map(c => c.slug) ?? [apiPkg.slug];
+
+Copy
+typescript
+Maya Mobile / Breeze / eSIMCard / Holafly — check for voice/SMS fields if they exist:
+
+// Generic pattern
+const hasData = plan.data_amount > 0 || plan.data_limit > 0;
+const hasVoice = (plan.voice_minutes ?? 0) > 0;
+const hasSms = (plan.sms_count ?? 0) > 0;
+const isUnlimited = plan.is_unlimited === true;
+const countries = plan.coverage_countries ?? [];
+
+Copy
+typescript
+Then every adapter calls the shared classifier:
+
+const { packageType, scopeType } = PackageClassifier.classify(
+  hasData, hasVoice, hasSms, isUnlimited, countries
+);
+
+Copy
+typescript
+Step 4: Storage (Catalog Sync)
+Nightly cron pulls from all providers → classifies → upserts to DB:
+
+Provider APIs  →  Adapters  →  Classifier  →  Prisma Package table
+                                                ├── packageType: DATA_WITH_ALL_UNLIMITED
+                                                ├── scopeType: REGIONAL
+                                                ├── countries: ["FR","DE","IT","ES"...]
+                                                ├── voiceMinutes: 100
+                                                ├── smsCount: 50
+                                                └── isUnlimited: false
+
+Copy
+Step 5: Query Flow
+User requests GET /packages?packageType=DATA_WITH_ALL_UNLIMITED&scopeType=REGIONAL&countries=FR:
+
+Request
+  │
+  ▼
+PackagesService.searchPackages()
+  │
+  ├── 1. Query local DB first (pre-classified, fast)
+  │     WHERE packageType = 'DATA_WITH_ALL_UNLIMITED'
+  │       AND scopeType = 'REGIONAL'
+  │       AND 'FR' = ANY(countries)
+  │       AND isActive = true
+  │
+  ├── 2. If DB has results → apply pricing engine → return
+  │
+  └── 3. If DB empty → fall back to live fan-out
+        ├── Fan out to all healthy providers
+        ├── Each adapter maps + classifies on the fly
+        ├── Filter results by packageType/scopeType in memory
+        └── Apply pricing → return
+
+Copy
+Step 6: Order Flow (Smart Routing)
+User requests POST /orders { packageId: "esim_5GB_30D_EU_V3" } — no providerId:
+
+OrdersService
+  │
+  ├── 1. Look up package in DB → get country, packageType, scopeType
+  │
+  ├── 2. ProviderRouterService.resolveOptimalProvider("FR", "DATA_WITH_ALL_UNLIMITED", "REGIONAL")
+  │     ├── Filter healthy providers
+  │     ├── Filter by supportedPackageTypes includes DATA_WITH_ALL_UNLIMITED
+  │     ├── Filter by preferredRegions includes "EUROPE"
+  │     ├── Sort by priority (lowest first)
+  │     ├── Among equal priority, sort by cheapest wholesale price
+  │     └── Return: "esim-go"
+  │
+  ├── 3. Dispatch to BullMQ with providerId = "esim-go"
+  │
+  └── 4. ActivationProcessor
+        ├── Try esim-go (3 attempts)
+        ├── If all fail → resolveOptimalProvider() excluding "esim-go"
+        ├── Try fallback provider (2 attempts)
+        └── If all fail → mark FAILED + webhook
+
+Copy
+Roadmap (Execution Order)
+Week 1 ─────────────────────────────────────────────
+│
+├── Day 1-2: Foundation
+│   ├── Add PackageType + ScopeType enums to Prisma
+│   ├── Add new fields to Package/ESim/Provider models
+│   ├── Run migration
+│   ├── Create package-classifier.util.ts
+│   └── Create country-regions.ts (190+ country → region map)
+│
+├── Day 3-5: Adapter Updates
+│   ├── eSIM Go adapter (richest — has allowances array with DATA/VOICE/SMS)
+│   ├── Airalo adapter (data-only, simplest)
+│   ├── Maya Mobile + Breeze + eSIMCard + Holafly
+│   ├── Add @WithCircuitBreaker() to all 4 missing adapters
+│   └── Verify each against sandbox API responses
+│
+Week 2 ─────────────────────────────────────────────
+│
+├── Day 1-2: Catalog Sync
+│   ├── Build CatalogSyncService (nightly cron)
+│   ├── Upsert all provider packages to DB with classification
+│   └── Deactivate stale packages
+│
+├── Day 3-4: Search Rewrite
+│   ├── Extend SearchPackagesDto (packageType, scopeType, region, hasSms, etc.)
+│   ├── Rewrite PackagesService to query DB first
+│   └── Live fan-out as fallback only
+│
+├── Day 5: Smart Routing
+│   ├── Build ProviderRouterService
+│   ├── Make providerId optional in CreateOrderDto
+│   └── Add fallback chain to ActivationProcessor
+│
+Week 3 ─────────────────────────────────────────────
+│
+├── Day 1-2: Usage Sync
+│   ├── Build UsageSyncService (6-hour cron)
+│   ├── Track data/voice/SMS per snapshot
+│   └── Extend UsagePredictorService for voice/SMS depletion
+│
+├── Day 3-4: API + Testing
+│   ├── Add GET /esims/:id/usage/daily + /usage/summary
+│   ├── Seed provider priority + preferredRegions
+│   └── Integration tests against sandbox APIs
+│
+└── Day 5: Validation
+    ├── End-to-end test: search → order → activate → usage poll
+    └── Verify all acceptance criteria from task doc
+
+
+Copy
+The key insight: providers don't know about your enums. The classification layer is entirely Atlantic's intelligence — it normalizes 6 different API shapes into one queryable model. The eSIM Go allowances array is the gold standard (explicit DATA/VOICE/SMS types). For providers that don't have that, you infer from whatever fields they expose.
+
+Want me to start building the foundation — Prisma migration + classifier utility?
+
+generate implementation roadmap from here till testing
+
+
+Context
+3 files read
+PHASE_11_PACKAGE_CLASSIFICATION.md
+TODO.md
+jest-e2e.json
+1 directory listed
+test
+5 files read
+packages.e2e-spec.ts
+setup.ts
+setup.ts
+providers.service.spec.ts
+airalo.adapter.spec.ts
+Now I have the full picture — existing test infrastructure, patterns, and conventions. Let me create the implementation roadmap.
+
+Creating the full implementation roadmap from foundation through testing, with every task, file, dependency, and test mapped out.
+

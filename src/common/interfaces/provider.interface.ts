@@ -21,7 +21,8 @@ export interface Package {
   dataAmount: number;
   dataUnit: 'MB' | 'GB';
   duration: number; // days
-  price: number;
+  wholesalePrice: number;
+  retailPrice: number;
   currency: string;
   coverage: string[];
   features?: string[];

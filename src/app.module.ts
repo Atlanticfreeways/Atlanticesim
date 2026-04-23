@@ -15,6 +15,8 @@ import { QueuesModule } from './modules/queues/queues.module';
 import { PartnersModule } from './modules/partners/partners.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { PrismaModule } from './config/prisma.module';
+import { SecretsManagerService } from './config/secrets-manager.service';
+import { MonitoringService } from './config/monitoring.service';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { HealthModule } from './modules/health/health.module';
@@ -32,6 +34,14 @@ import { validationSchema } from './config/env.validation';
       isGlobal: true,
       envFilePath: '.env',
       ignoreEnvFile: process.env.NODE_ENV === 'production',
+      expandVariables: true,
+      load: [() => {
+        // Force .env values to override stale system env vars
+        const dotenv = require('dotenv');
+        const parsed = dotenv.config({ path: '.env' }).parsed || {};
+        Object.assign(process.env, parsed);
+        return parsed;
+      }],
       validationSchema: validationSchema,
       validationOptions: {
         abortEarly: true,
@@ -61,12 +71,14 @@ import { validationSchema } from './config/env.validation';
     BullModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: async (config: ConfigService) => ({
-        redis: {
-          host: config.get('REDIS_HOST') || 'localhost',
-          port: config.get('REDIS_PORT') || 6379,
-        },
-      }),
+      useFactory: async (config: ConfigService) => {
+        const redisUrl = config.get('REDIS_URL');
+        if (redisUrl) {
+          const url = new URL(redisUrl);
+          return { redis: { host: url.hostname, port: parseInt(url.port) || 6379 } };
+        }
+        return { redis: { host: config.get('REDIS_HOST') || 'localhost', port: config.get('REDIS_PORT') || 6379 } };
+      },
     }),
     PrismaModule,
     AuthModule,
@@ -89,6 +101,8 @@ import { validationSchema } from './config/env.validation';
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
+    SecretsManagerService,
+    MonitoringService,
   ],
 })
 export class AppModule { }

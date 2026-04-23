@@ -1,0 +1,7 @@
+version: '3.8'
+
+services:
+  postgres:
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Removed the faulty init-db.sql mapping

@@ -149,9 +149,9 @@ export class ProvidersService implements OnModuleInit {
     Object.keys(tiers).forEach(size => {
       const tierPackages = tiers[Number(size)];
       if (tierPackages.length > 0) {
-        const minPrice = Math.min(...tierPackages.map(p => p.price));
+        const minPrice = Math.min(...tierPackages.map(p => p.wholesalePrice));
         tierPackages.forEach(p => {
-          if (p.price === minPrice) p.isBestValue = true;
+          if (p.wholesalePrice === minPrice) p.isBestValue = true;
         });
       }
     });

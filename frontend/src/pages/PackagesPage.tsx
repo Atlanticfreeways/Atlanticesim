@@ -18,13 +18,6 @@ export const PackagesPage: React.FC = () => {
       hasVoice 
     })
   );
-  const { data: packages, isLoading } = useQuery(
-    ['packages', { countries: selectedCountry, hasVoice }],
-    () => packagesApi.search({ 
-      countries: selectedCountry || undefined,
-      hasVoice 
-    })
-  );
 
   const handleSelectPackage = async (pkg: Package) => {
     try {

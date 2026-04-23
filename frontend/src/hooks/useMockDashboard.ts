@@ -4,7 +4,7 @@
  * Can be swapped with useDashboard for real API calls
  */
 
-import { useQuery, UseQueryResult } from '@tanstack/react-query';
+import { useQuery, UseQueryResult } from 'react-query';
 import { DashboardData, DashboardError } from '@/types/dashboard';
 import { mockDashboardData } from '@/mocks/dashboardData';
 

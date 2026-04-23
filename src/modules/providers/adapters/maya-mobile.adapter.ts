@@ -11,7 +11,7 @@ import {
   ESIMDetails,
 } from '../../../common/interfaces/provider.interface';
 import { PackageClassifier } from '../../../common/utils/package-classifier.util';
-
+import { WithCircuitBreaker } from '../../../common/providers/circuit-breaker.decorator';
 import { PrismaService } from '../../../config/prisma.service';
 
 @Injectable()
@@ -29,6 +29,7 @@ export class MayaMobileAdapter extends BaseProviderAdapter {
     );
   }
 
+  @WithCircuitBreaker()
   async searchPackages(filters: PackageFilters): Promise<Package[]> {
     this.logger.log(`Searching packages with filters: ${JSON.stringify(filters)}`);
 
@@ -57,6 +58,7 @@ export class MayaMobileAdapter extends BaseProviderAdapter {
     }
   }
 
+  @WithCircuitBreaker()
   async getPackageDetails(packageId: string): Promise<Package> {
     try {
       await this.setupAuthHeader();
@@ -70,6 +72,7 @@ export class MayaMobileAdapter extends BaseProviderAdapter {
     }
   }
 
+  @WithCircuitBreaker()
   async createOrder(orderData: CreateOrderDto): Promise<Order> {
     try {
       await this.setupAuthHeader();

@@ -117,4 +117,45 @@ export class AdminService {
       data: { config },
     });
   }
+
+  async getPricingSettings() {
+    const [global, providers] = await Promise.all([
+      this.prisma.globalPricing.findFirst({ where: { id: 'default' } }),
+      this.prisma.provider.findMany({
+        select: { id: true, name: true, slug: true, defaultMargin: true, fixedMarkup: true },
+      }),
+    ]);
+
+    return { global, providers };
+  }
+
+  async updateGlobalPricing(data: { defaultMargin?: number; fixedMarkup?: number }) {
+    return this.prisma.globalPricing.update({
+      where: { id: 'default' },
+      data: {
+        ...(data.defaultMargin !== undefined && { defaultMargin: data.defaultMargin }),
+        ...(data.fixedMarkup !== undefined && { fixedMarkup: data.fixedMarkup }),
+      },
+    });
+  }
+
+  async updateProviderPricing(
+    providerId: string,
+    data: { defaultMargin?: number; fixedMarkup?: number },
+  ) {
+    return this.prisma.provider.update({
+      where: { id: providerId },
+      data: {
+        ...(data.defaultMargin !== undefined && { defaultMargin: data.defaultMargin }),
+        ...(data.fixedMarkup !== undefined && { fixedMarkup: data.fixedMarkup }),
+      },
+    });
+  }
+
+  async setPackageOverride(packageId: string, retailPrice: number) {
+    return this.prisma.package.update({
+      where: { id: packageId },
+      data: { retailPriceOverride: retailPrice },
+    });
+  }
 }
