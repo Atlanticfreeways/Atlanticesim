@@ -6,7 +6,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
-import { AuthProvider } from '@/context/AuthContext';
+import { AuthProvider } from '@/hooks/useAuth';
 import { routes } from '@/router/routes';
 
 /**

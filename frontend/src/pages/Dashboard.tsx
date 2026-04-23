@@ -21,8 +21,15 @@ import { QuickActionsBar } from '@/components/dashboard/QuickActionsBar';
 import { QRModal } from '@/components/dashboard/QRModal';
 import { TopUpModal } from '@/components/dashboard/TopUpModal';
 import { WalletDepositModal } from '@/components/partners/WalletDepositModal';
-import { useDashboard } from '@/hooks/useDashboard';
+import { useMockDashboard as useDashboard } from '@/hooks/useMockDashboard';
 import { useAuth } from '@/hooks/useAuth';
+
+// Badge component
+const Badge: React.FC<{ variant: string; children: React.ReactNode }> = ({ children }) => (
+  <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+    {children}
+  </span>
+);
 
 /**
  * Error state component
@@ -64,7 +71,7 @@ const StatsCardsSkeleton: React.FC = () => (
  */
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const { data, isLoading, error, refetch } = useDashboard();
   
   // Modal states
