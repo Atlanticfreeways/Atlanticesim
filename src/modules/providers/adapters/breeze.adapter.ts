@@ -10,6 +10,7 @@ import {
   ActivationResult,
   ESIMDetails,
 } from '../../../common/interfaces/provider.interface';
+import { PackageClassifier } from '../../../common/utils/package-classifier.util';
 
 import { PrismaService } from '../../../config/prisma.service';
 
@@ -134,6 +135,16 @@ export class BreezeAdapter extends BaseProviderAdapter {
   // --- Helpers ---
 
   private mapToPackage(bundle: any): Package {
+    const countries = bundle.supported_countries || [];
+    const hasData = (bundle.volume || bundle.data_amount || 0) > 0;
+    const hasVoice = (bundle.voice_minutes ?? 0) > 0;
+    const hasSms = (bundle.sms_count ?? 0) > 0;
+    const isUnlimited = bundle.is_unlimited === true;
+
+    const { packageType, scopeType } = PackageClassifier.classify({
+      hasData, hasVoice, hasSms, isUnlimited, countries,
+    });
+
     return {
       id: bundle.code || bundle.id,
       providerId: 'breeze',
@@ -144,12 +155,15 @@ export class BreezeAdapter extends BaseProviderAdapter {
       dataAmount: this.normalizeDataAmount(bundle.volume),
       dataUnit: 'GB',
       duration: bundle.validity_days || 30,
-      price: parseFloat(bundle.price),
+      wholesalePrice: parseFloat(bundle.price),
+      retailPrice: parseFloat(bundle.price),
       currency: bundle.currency || 'USD',
-      coverage: bundle.supported_countries || [],
+      coverage: countries,
       isActive: true,
       meta: {
         network_speed: bundle.speed,
+        packageType,
+        scopeType,
       }
     };
   }
@@ -207,7 +221,8 @@ export class BreezeAdapter extends BaseProviderAdapter {
           dataAmount: 10,
           dataUnit: 'GB',
           duration: 30,
-          price: 15.00,
+          wholesalePrice: 15.00,
+          retailPrice: 15.00,
           currency: 'USD',
           coverage: ['US', 'CA', 'MX'],
           isActive: true,

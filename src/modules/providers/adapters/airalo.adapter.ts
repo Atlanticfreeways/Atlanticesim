@@ -12,6 +12,7 @@ import {
   ActivationResult,
   ESIMDetails,
 } from '../../../common/interfaces/provider.interface';
+import { PackageClassifier } from '../../../common/utils/package-classifier.util';
 
 import { PrismaService } from '../../../config/prisma.service';
 
@@ -112,23 +113,37 @@ export class AiraloAdapter extends BaseProviderAdapter {
   }
 
   private mapToPackage(apiPkg: any): Package {
+    const countries = apiPkg.operator?.countries?.map((c: any) => c.slug) ?? [apiPkg.slug];
+    const isUnlimited = apiPkg.type === 'unlimited';
+
+    const { packageType, scopeType } = PackageClassifier.classify({
+      hasData: true,
+      hasVoice: false,
+      hasSms: false,
+      isUnlimited,
+      countries,
+    });
+
     return {
       id: apiPkg.id.toString(),
       providerId: 'airalo',
       providerName: 'Airalo',
       title: apiPkg.operator.title,
       description: apiPkg.operator.description || '',
-      country: apiPkg.slug, // Airalo uses slugs for countries
+      country: apiPkg.slug,
       dataAmount: apiPkg.data_amount,
       dataUnit: apiPkg.data_unit === 'GB' ? 'GB' : 'MB',
       duration: apiPkg.validity,
-      price: apiPkg.price,
-      currency: 'USD', // Standard for Airalo
-      coverage: [apiPkg.slug],
+      wholesalePrice: apiPkg.price,
+      retailPrice: apiPkg.price,
+      currency: 'USD',
+      coverage: countries,
       isActive: true,
       meta: {
         operator: apiPkg.operator.title,
         type: apiPkg.type,
+        packageType,
+        scopeType,
       }
     };
   }

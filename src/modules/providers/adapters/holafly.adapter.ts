@@ -11,6 +11,7 @@ import {
   ActivationResult,
   ESIMDetails,
 } from '../../../common/interfaces/provider.interface';
+import { PackageClassifier } from '../../../common/utils/package-classifier.util';
 
 @Injectable()
 export class HolaflyAdapter extends BaseProviderAdapter {
@@ -131,6 +132,17 @@ export class HolaflyAdapter extends BaseProviderAdapter {
   }
 
   private mapToPackage(pkg: any): Package {
+    const countries = pkg.countries || [];
+    const dataAmount = typeof pkg.data_limit === 'string' ? parseFloat(pkg.data_limit) : (pkg.data_limit || 0);
+    const isUnlimited = pkg.is_unlimited === true;
+    const hasData = dataAmount > 0 || isUnlimited;
+    const hasVoice = (pkg.voice_minutes ?? 0) > 0;
+    const hasSms = (pkg.sms_count ?? 0) > 0;
+
+    const { packageType, scopeType } = PackageClassifier.classify({
+      hasData, hasVoice, hasSms, isUnlimited, countries,
+    });
+
     return {
       id: pkg.id,
       providerId: 'holafly',
@@ -138,15 +150,18 @@ export class HolaflyAdapter extends BaseProviderAdapter {
       title: pkg.name,
       description: pkg.description || '',
       country: pkg.country || 'Global',
-      dataAmount: typeof pkg.data_limit === 'string' ? parseFloat(pkg.data_limit) : (pkg.data_limit || 0),
+      dataAmount,
       dataUnit: 'GB',
       duration: pkg.validity_days || 30,
-      price: pkg.price || 0,
+      wholesalePrice: pkg.price || 0,
+      retailPrice: pkg.price || 0,
       currency: pkg.currency || 'USD',
-      coverage: pkg.countries || [],
+      coverage: countries,
       isActive: true,
       meta: {
-        is_unlimited: pkg.is_unlimited || false,
+        is_unlimited: isUnlimited,
+        packageType,
+        scopeType,
       }
     };
   }
@@ -163,7 +178,8 @@ export class HolaflyAdapter extends BaseProviderAdapter {
         dataAmount: 999, // Represents Unlimited usually
         dataUnit: 'GB',
         duration: 15,
-        price: 34.00,
+        wholesalePrice: 34.00,
+        retailPrice: 34.00,
         currency: 'USD',
         coverage: ['FR', 'DE', 'IT', 'ES'],
         isActive: true,

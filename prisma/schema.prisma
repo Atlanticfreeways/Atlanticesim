@@ -131,8 +131,14 @@ model Provider {
   apiBaseUrl  String
   isActive    Boolean           @default(true)
   config      Json
+  priority    Int               @default(100)
+  supportedPackageTypes PackageType[]
+  preferredRegions      String[]
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
+
+  defaultMargin Decimal?        @db.Decimal(5, 2)
+  fixedMarkup   Decimal?        @db.Decimal(10, 2)
 
   packages    Package[]
   orders      Order[]
@@ -142,7 +148,7 @@ model Provider {
 }
 
 model Package {
-  id                String   @id @default(cuid())
+  id                String      @id @default(cuid())
   providerId        String
   providerPackageId String
   name              String
@@ -151,19 +157,23 @@ model Package {
   regions           String[]
   dataAmount        Int
   dataUnit          DataUnit
-  isUnlimited       Boolean  @default(false)
+  isUnlimited       Boolean     @default(false)
   validityDays      Int
-  startType         StartType @default(IMMEDIATE)
-  price             Decimal  @db.Decimal(10, 2)
-  currency          String   @default("USD")
+  startType         StartType   @default(IMMEDIATE)
+  price             Decimal     @db.Decimal(10, 2)
+  retailPriceOverride Decimal?  @db.Decimal(10, 2)
+  currency          String      @default("USD")
   features          String[]
-  hasVoice          Boolean  @default(false)
-  hasSms            Boolean  @default(false)
+  hasVoice          Boolean     @default(false)
+  hasSms            Boolean     @default(false)
   voiceMinutes      Int?
   smsCount          Int?
-  isActive          Boolean  @default(true)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  packageType       PackageType @default(DATA_ONLY)
+  scopeType         ScopeType   @default(LOCAL)
+  isActive          Boolean     @default(true)
+  lastSyncedAt      DateTime?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
 
   provider Provider @relation(fields: [providerId], references: [id])
   orders   Order[]
@@ -172,6 +182,7 @@ model Package {
   @@index([providerId])
   @@index([countries])
   @@index([isActive])
+  @@index([packageType, scopeType])
   @@map("packages")
 }
 
@@ -286,4 +297,31 @@ enum ESimStatus {
   EXPIRED
   DEPLETED
   SUSPENDED
+}
+
+enum PackageType {
+  DATA_ONLY
+  VOICE_ONLY
+  TEXT_ONLY
+  DATA_WITH_TEXT
+  DATA_WITH_CALL
+  TEXT_WITH_CALL
+  ALL_INCLUSIVE
+  DATA_WITH_ALL_UNLIMITED
+}
+
+enum ScopeType {
+  LOCAL
+  REGIONAL
+  MULTI_COUNTRY
+  GLOBAL
+}
+
+model GlobalPricing {
+  id            String  @id @default(cuid())
+  defaultMargin Decimal @db.Decimal(5, 2) @default(15.00) // 15%
+  fixedMarkup   Decimal @db.Decimal(10, 2) @default(0.00)
+  updatedAt     DateTime @updatedAt
+
+  @@map("global_pricing")
 }

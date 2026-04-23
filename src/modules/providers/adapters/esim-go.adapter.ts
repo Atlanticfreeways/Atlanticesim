@@ -12,6 +12,7 @@ import {
     ActivationResult,
     ESIMDetails,
 } from '../../../common/interfaces/provider.interface';
+import { PackageClassifier } from '../../../common/utils/package-classifier.util';
 
 import { PrismaService } from '../../../config/prisma.service';
 
@@ -65,23 +66,41 @@ export class EsimGoAdapter extends BaseProviderAdapter {
     }
 
     private mapToPackage(bundle: any): Package {
+        const countries = bundle.countries?.map((c: any) => c.iso) || [];
+        const hasData = bundle.allowances?.some((a: any) => a.type === 'DATA') ?? (bundle.dataAmount > 0);
+        const hasVoice = bundle.allowances?.some((a: any) => a.type === 'VOICE') ?? false;
+        const hasSms = bundle.allowances?.some((a: any) => a.type === 'SMS') ?? false;
+        const isUnlimited = bundle.unlimited === true;
+
+        const { packageType, scopeType } = PackageClassifier.classify({
+            hasData, hasVoice, hasSms, isUnlimited, countries,
+        });
+
+        const voiceAllowance = bundle.allowances?.find((a: any) => a.type === 'VOICE');
+        const smsAllowance = bundle.allowances?.find((a: any) => a.type === 'SMS');
+
         return {
-            id: bundle.name, // eSIM Go uses name as ID
+            id: bundle.name,
             providerId: 'esim-go',
             providerName: 'eSIM Go',
             title: bundle.description || bundle.name,
             description: bundle.description || '',
-            country: bundle.countries?.[0]?.iso || '',
+            country: countries[0] || '',
             dataAmount: bundle.dataAmount || 0,
-            dataUnit: 'MB', // Schema confirms MB
+            dataUnit: 'MB',
             duration: bundle.duration || 0,
-            price: bundle.price || 0,
+            wholesalePrice: bundle.price || 0,
+            retailPrice: bundle.price || 0,
             currency: 'USD',
-            coverage: bundle.countries?.map((c: any) => c.iso) || [],
+            coverage: countries,
             isActive: true,
             meta: {
-                unlimited: bundle.unlimited,
+                unlimited: isUnlimited,
                 speed: bundle.speed,
+                packageType,
+                scopeType,
+                voiceMinutes: voiceAllowance?.amount,
+                smsCount: smsAllowance?.amount,
             }
         };
     }

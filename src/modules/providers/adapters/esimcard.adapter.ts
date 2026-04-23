@@ -11,6 +11,7 @@ import {
   ActivationResult,
   ESIMDetails,
 } from '../../../common/interfaces/provider.interface';
+import { PackageClassifier } from '../../../common/utils/package-classifier.util';
 
 @Injectable()
 export class EsimCardAdapter extends BaseProviderAdapter {
@@ -132,6 +133,16 @@ export class EsimCardAdapter extends BaseProviderAdapter {
   }
 
   private mapToPackage(pkg: any): Package {
+    const countries = pkg.countries || [];
+    const hasData = (typeof pkg.data === 'string' ? parseFloat(pkg.data) : (pkg.data || 0)) > 0;
+    const hasVoice = (pkg.voice_minutes ?? 0) > 0;
+    const hasSms = (pkg.sms_count ?? 0) > 0;
+    const isUnlimited = pkg.is_unlimited === true;
+
+    const { packageType, scopeType } = PackageClassifier.classify({
+      hasData, hasVoice, hasSms, isUnlimited, countries,
+    });
+
     return {
       id: pkg.id,
       providerId: 'esimcard',
@@ -142,12 +153,15 @@ export class EsimCardAdapter extends BaseProviderAdapter {
       dataAmount: typeof pkg.data === 'string' ? parseFloat(pkg.data) : (pkg.data || 0),
       dataUnit: 'GB',
       duration: pkg.validity || 30,
-      price: pkg.price || 0,
+      wholesalePrice: pkg.price || 0,
+      retailPrice: pkg.price || 0,
       currency: pkg.currency || 'USD',
-      coverage: pkg.countries || [],
+      coverage: countries,
       isActive: true,
       meta: {
         network: pkg.network || [],
+        packageType,
+        scopeType,
       }
     };
   }
@@ -164,7 +178,8 @@ export class EsimCardAdapter extends BaseProviderAdapter {
         dataAmount: 10,
         dataUnit: 'GB',
         duration: 30,
-        price: 25.00,
+        wholesalePrice: 25.00,
+        retailPrice: 25.00,
         currency: 'USD',
         coverage: ['US', 'GB', 'FR', 'DE'],
         isActive: true,

@@ -10,6 +10,7 @@ import {
   ActivationResult,
   ESIMDetails,
 } from '../../../common/interfaces/provider.interface';
+import { PackageClassifier } from '../../../common/utils/package-classifier.util';
 
 import { PrismaService } from '../../../config/prisma.service';
 
@@ -141,6 +142,16 @@ export class MayaMobileAdapter extends BaseProviderAdapter {
   // --- Helpers ---
 
   private mapToPackage(plan: any): Package {
+    const countries = plan.coverage_countries || [];
+    const hasData = (plan.data_amount || 0) > 0;
+    const hasVoice = (plan.voice_minutes ?? 0) > 0;
+    const hasSms = (plan.sms_count ?? 0) > 0;
+    const isUnlimited = plan.is_unlimited === true;
+
+    const { packageType, scopeType } = PackageClassifier.classify({
+      hasData, hasVoice, hasSms, isUnlimited, countries,
+    });
+
     return {
       id: plan.uuid || plan.id,
       providerId: 'maya-mobile',
@@ -149,15 +160,20 @@ export class MayaMobileAdapter extends BaseProviderAdapter {
       description: plan.description || '',
       country: plan.country_code || 'Global',
       dataAmount: this.normalizeDataAmount(plan.data_amount),
-      dataUnit: 'GB', // Maya usually deals in GB
+      dataUnit: 'GB',
       duration: plan.duration_days || 30,
-      price: parseFloat(plan.retail_price || plan.price),
+      wholesalePrice: parseFloat(plan.retail_price || plan.price),
+      retailPrice: parseFloat(plan.retail_price || plan.price),
       currency: plan.currency || 'USD',
-      coverage: plan.coverage_countries || [],
+      coverage: countries,
       isActive: true,
       meta: {
         network_type: plan.network_type,
         regions: plan.regions,
+        packageType,
+        scopeType,
+        voiceMinutes: plan.voice_minutes,
+        smsCount: plan.sms_count,
       }
     };
   }
@@ -212,7 +228,8 @@ export class MayaMobileAdapter extends BaseProviderAdapter {
           dataAmount: 3,
           dataUnit: 'GB',
           duration: 30,
-          price: 8.00,
+          wholesalePrice: 8.00,
+          retailPrice: 8.00,
           currency: 'USD',
           coverage: ['US'],
           isActive: true,
@@ -227,7 +244,8 @@ export class MayaMobileAdapter extends BaseProviderAdapter {
           dataAmount: 5,
           dataUnit: 'GB',
           duration: 30,
-          price: 12.00,
+          wholesalePrice: 12.00,
+          retailPrice: 12.00,
           currency: 'USD',
           coverage: ['US'],
           isActive: true,
