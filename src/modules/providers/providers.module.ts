@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ProvidersService } from './providers.service';
 import { ProviderHealthService } from './provider-health.service';
+import { ProviderHealthServiceEnhanced } from './provider-health-enhanced.service';
 import { ProviderRouterService } from './provider-router.service';
 import { ProviderHealthController } from './provider-health.controller';
 import { AiraloAdapter } from './adapters/airalo.adapter';
@@ -17,6 +18,7 @@ import { EsimGoAdapter } from './adapters/esim-go.adapter';
   providers: [
     ProvidersService,
     ProviderHealthService,
+    ProviderHealthServiceEnhanced,
     ProviderRouterService,
     AiraloAdapter,
     EsimGoAdapter,
@@ -25,6 +27,11 @@ import { EsimGoAdapter } from './adapters/esim-go.adapter';
     BreezeAdapter,
     HolaflyAdapter,
   ],
-  exports: [ProvidersService, ProviderHealthService, ProviderRouterService],
+  exports: [
+    ProvidersService,
+    ProviderHealthService,
+    ProviderHealthServiceEnhanced,
+    ProviderRouterService,
+  ],
 })
 export class ProvidersModule {}

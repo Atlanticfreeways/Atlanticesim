@@ -161,6 +161,7 @@ model Package {
   validityDays      Int
   startType         StartType   @default(IMMEDIATE)
   price             Decimal     @db.Decimal(10, 2)
+  wholesalePrice    Decimal?    @db.Decimal(10, 2)
   retailPriceOverride Decimal?  @db.Decimal(10, 2)
   currency          String      @default("USD")
   features          String[]
@@ -172,6 +173,16 @@ model Package {
   scopeType         ScopeType   @default(LOCAL)
   isActive          Boolean     @default(true)
   lastSyncedAt      DateTime?
+  fairUsageNote     String?
+  throttleAfterGb   Decimal?    @db.Decimal(10, 2)
+  throttleSpeedMbps Int?
+  costPerGb         Decimal?    @db.Decimal(10, 4)
+  providerApiVersion String?
+  deprecatedAt      DateTime?
+  deprecationReason String?
+  lastSyncError     String?
+  userFupFeedbackCount Int @default(0)
+  userFupAccuracyScore Decimal? @db.Decimal(3, 2)
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 
@@ -183,6 +194,9 @@ model Package {
   @@index([countries])
   @@index([isActive])
   @@index([packageType, scopeType])
+  @@index([fairUsageNote])
+  @@index([throttleAfterGb])
+  @@index([costPerGb])
   @@map("packages")
 }
 
@@ -319,9 +333,53 @@ enum ScopeType {
 
 model GlobalPricing {
   id            String  @id @default(cuid())
-  defaultMargin Decimal @db.Decimal(5, 2) @default(15.00) // 15%
+  defaultMargin Decimal @db.Decimal(5, 2) @default(15.00)
   fixedMarkup   Decimal @db.Decimal(10, 2) @default(0.00)
   updatedAt     DateTime @updatedAt
 
   @@map("global_pricing")
+}
+
+model SyncHistory {
+  id                String   @id @default(cuid())
+  providerId        String
+  syncStartedAt     DateTime
+  syncCompletedAt   DateTime?
+  packagesSynced    Int      @default(0)
+  packagesFailed    Int      @default(0)
+  errorMessage      String?
+  syncDurationMs    Int?
+  createdAt         DateTime @default(now())
+
+  @@index([providerId, syncStartedAt])
+  @@map("sync_history")
+}
+
+model ProviderHealth {
+  id                String   @id @default(cuid())
+  providerId        String   @unique
+  healthScore       Decimal  @db.Decimal(3, 2) @default(1.0)
+  latencyMs         Int?
+  errorRate         Decimal  @db.Decimal(5, 2) @default(0.0)
+  lastCheckAt       DateTime?
+  consecutiveFailures Int    @default(0)
+  isDegraded        Boolean  @default(false)
+  updatedAt         DateTime @updatedAt
+
+  @@index([healthScore])
+  @@map("provider_health")
+}
+
+model PricingRule {
+  id                String   @id @default(cuid())
+  priority          Int
+  conditionJson     Json
+  retailPrice       Decimal? @db.Decimal(10, 2)
+  expiresAt         DateTime?
+  appliedCount      Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([priority, expiresAt])
+  @@map("pricing_rules")
 }

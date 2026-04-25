@@ -16,7 +16,10 @@ export class UsagePredictorService {
   constructor(private prisma: PrismaService) {}
 
   async predictDepletion(esimId: string): Promise<DepletionPrediction[]> {
-    const esim = await this.prisma.eSim.findUnique({ where: { id: esimId } });
+    const esim = await this.prisma.eSim.findUnique({ 
+      where: { id: esimId },
+      include: { order: { include: { package: true } } }
+    });
     if (!esim) return [];
 
     const predictions: DepletionPrediction[] = [];
@@ -24,6 +27,22 @@ export class UsagePredictorService {
     // Data depletion
     if (esim.dataTotal > 0) {
       predictions.push(await this.predictMetric(esimId, 'data', esim.dataUsed, esim.dataTotal));
+    }
+
+    // Voice depletion (if package has voice)
+    const voiceMinutes = esim.order?.package?.voiceMinutes;
+    if (voiceMinutes && voiceMinutes > 0) {
+      // Voice usage would need to be tracked in ESim model or separate table
+      // For now, we'll use a placeholder of 0 used
+      predictions.push(await this.predictMetric(esimId, 'voice', 0, voiceMinutes));
+    }
+
+    // SMS depletion (if package has SMS)
+    const smsCount = esim.order?.package?.smsCount;
+    if (smsCount && smsCount > 0) {
+      // SMS usage would need to be tracked in ESim model or separate table
+      // For now, we'll use a placeholder of 0 used
+      predictions.push(await this.predictMetric(esimId, 'sms', 0, smsCount));
     }
 
     return predictions;

@@ -17,6 +17,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { PrismaModule } from './config/prisma.module';
 import { SecretsManagerService } from './config/secrets-manager.service';
 import { MonitoringService } from './config/monitoring.service';
+import { MonitoringServiceEnhanced } from './config/monitoring-alerts.service';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { HealthModule } from './modules/health/health.module';
@@ -103,6 +104,7 @@ import { validationSchema } from './config/env.validation';
     },
     SecretsManagerService,
     MonitoringService,
+    MonitoringServiceEnhanced,
   ],
 })
 export class AppModule { }

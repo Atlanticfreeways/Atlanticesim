@@ -15,9 +15,11 @@ export class CatalogSyncService {
     private healthService: ProviderHealthService,
   ) {}
 
-  @Cron('0 3 * * *')
+  // Changed from daily (0 3 * * *) to 6-hour intervals (0 */6 * * *)
+  // Runs at: 00:00, 06:00, 12:00, 18:00 UTC
+  @Cron('0 */6 * * *')
   async syncAll() {
-    this.logger.log('Starting nightly catalog sync...');
+    this.logger.log('Starting 6-hour catalog sync...');
     const healthyIds = this.healthService.getHealthyProviderIds();
     let totalUpserted = 0;
     let totalDeactivated = 0;
