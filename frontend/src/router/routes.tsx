@@ -3,14 +3,17 @@
  * Centralized route configuration
  */
 
-import React from 'react';
+import React, { lazy } from 'react';
 import { RouteObject } from 'react-router-dom';
-import { Dashboard } from '@/pages/Dashboard';
-import { PackagesPage } from '@/pages/PackagesPage';
-import { PackageDetailsPage } from '@/pages/PackageDetailsPage';
-import { ApiKeyPage } from '@/pages/ApiKeyPage';
-import { WebhookPage } from '@/pages/WebhookPage';
+import { LandingPage } from '@/pages/LandingPage';
 import { ComingSoon } from '@/pages/ComingSoon';
+
+// Lazy load heavy components
+const Dashboard = lazy(() => import('@/pages/Dashboard').then(m => ({ default: m.Dashboard })));
+const PackagesPage = lazy(() => import('@/pages/PackagesPage').then(m => ({ default: m.PackagesPage })));
+const PackageDetailsPage = lazy(() => import('@/pages/PackageDetailsPage').then(m => ({ default: m.PackageDetailsPage })));
+const ApiKeyPage = lazy(() => import('@/pages/ApiKeyPage').then(m => ({ default: m.ApiKeyPage })));
+const WebhookPage = lazy(() => import('@/pages/WebhookPage').then(m => ({ default: m.WebhookPage })));
 
 /**
  * Route configuration
@@ -18,7 +21,7 @@ import { ComingSoon } from '@/pages/ComingSoon';
 export const routes: RouteObject[] = [
   {
     path: '/',
-    element: <Dashboard />,
+    element: <LandingPage />,
   },
   {
     path: '/dashboard',
