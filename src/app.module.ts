@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { CacheModule } from '@nestjs/cache-manager';
 import { BullModule } from '@nestjs/bull';
+import * as dotenv from 'dotenv';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { ProvidersModule } from './modules/providers/providers.module';
@@ -38,7 +39,6 @@ import { validationSchema } from './config/env.validation';
       expandVariables: true,
       load: [() => {
         // Force .env values to override stale system env vars
-        const dotenv = require('dotenv');
         const parsed = dotenv.config({ path: '.env' }).parsed || {};
         Object.assign(process.env, parsed);
         return parsed;
@@ -66,7 +66,7 @@ import { validationSchema } from './config/env.validation';
           name: 'login',
           ttl: 300000, // 5 mins
           limit: 5,
-        }
+        },
       ],
     }),
     BullModule.forRootAsync({
@@ -107,4 +107,4 @@ import { validationSchema } from './config/env.validation';
     MonitoringServiceEnhanced,
   ],
 })
-export class AppModule { }
+export class AppModule {}
