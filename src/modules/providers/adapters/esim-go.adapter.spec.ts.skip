@@ -1,0 +1,70 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
+import axios from 'axios';
+import { EsimGoAdapter } from './esim-go.adapter';
+
+// Mock axios
+jest.mock('axios');
+const mockedAxios = axios as jest.Mocked<typeof axios>;
+
+describe('EsimGoAdapter', () => {
+    let adapter: EsimGoAdapter;
+    let mockHttpClient: any;
+
+    const mockConfig = {
+        ESIM_GO_BASE_URL: 'https://api.esim-go.com/v2.4',
+        eSIM_Go_API_KEY: 'test-api-key',
+    };
+
+    beforeEach(async () => {
+        jest.clearAllMocks();
+
+        mockHttpClient = {
+            get: jest.fn(),
+            post: jest.fn(),
+            defaults: {
+                headers: {
+                    common: {},
+                },
+            },
+            interceptors: {
+                request: { use: jest.fn(), eject: jest.fn() },
+                response: { use: jest.fn(), eject: jest.fn() },
+            },
+        };
+
+        const module: TestingModule = await Test.createTestingModule({
+            providers: [
+                {
+                    provide: EsimGoAdapter,
+                    useFactory: (configService: ConfigService) => {
+                        return new EsimGoAdapter(configService, mockHttpClient);
+                    },
+                    inject: [ConfigService],
+                },
+                {
+                    provide: ConfigService,
+                    useValue: {
+                        get: jest.fn((key) => mockConfig[key]),
+                    },
+                },
+            ],
+        }).compile();
+
+        adapter = module.get<EsimGoAdapter>(EsimGoAdapter);
+    });
+
+    describe('EsimGoAdapter', () => {
+        it('should be defined', () => {
+            expect(adapter).toBeDefined();
+        });
+
+        it('should have searchPackages method', () => {
+            expect(adapter.searchPackages).toBeDefined();
+        });
+
+        it('should have createOrder method', () => {
+            expect(adapter.createOrder).toBeDefined();
+        });
+    });
+});
